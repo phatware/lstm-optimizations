@@ -33,3 +33,9 @@
 
 # Jupyter notebooks
 .ipynb_checkpoints/
+
+# Xcode/MSVS
+DerivedData/
+*.user
+xcuserdata/
+
