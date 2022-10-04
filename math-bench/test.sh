@@ -1,6 +1,6 @@
 echo building...
 rm *.csv
-clang -O3 -std=gnu++20 -lstdc++ -Wall math-bench/math-bench.cpp
+clang -O3 -std=gnu++20 -lstdc++ -lm -Wall math-bench/math-bench.cpp
 echo running...
 ./a.out
 rm a.out
