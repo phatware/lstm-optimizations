@@ -38,4 +38,6 @@
 DerivedData/
 *.user
 xcuserdata/
+x64/
+.vs/
 
