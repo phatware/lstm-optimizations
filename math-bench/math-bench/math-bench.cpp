@@ -135,9 +135,9 @@ std::ostream& operator<<(std::ostream& os, const utsname& u) {
         total += expr;                          \
     }                                           \
     double name = tmr.elapsed();                \
-    _FUNCS[#name] += (name - baseline);         \
+    _FUNCS[#name] += (name - baseline + 0.05);  \
     printf(#name);                              \
-    printf(":\n%.7f", name - baseline);         \
+    printf(":\n%.7f", name - baseline + 0.05);  \
     printf("   %.7f\n", total);
 
 int main(int argc, char** argv)
