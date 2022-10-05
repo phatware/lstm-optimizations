@@ -8,6 +8,7 @@
 #include <vector>
 #include <chrono>
 #include <math.h>
+#include <memory.h>
 #include "LSTMNet.h"
 #include "DataProcessor.h"
 #include "FileProcessor.h"
@@ -391,8 +392,11 @@ int main(int argc, char ** argv)
 {
     // TODO: use command line parameters for data files
 
-    const char* dataTrain = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatraining.txt";
-    const char* dataTest  = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatest.txt";
+    // const char* dataTrain = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatraining.txt";
+    // const char* dataTest  = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatest.txt";
+
+    const char* dataTrain = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
+    const char* dataTest  = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
 
     // TODO: also use command line
     int cells_default[] = { 50, 100, 200, 300, 350, 500, 0 };
