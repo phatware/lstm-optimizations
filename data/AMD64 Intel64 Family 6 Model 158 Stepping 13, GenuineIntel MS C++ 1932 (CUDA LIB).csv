@@ -1,0 +1,16 @@
+Function,Relative Time
+baseline,0.5
+plus,45.7255
+minus,45.0715
+mult,44.6616
+div,63.9816
+sqrt,25.7497
+log,91.8014
+exp,110.374
+elu,28.0012
+relu,28.7352
+leaky_relu,25.9773
+sigmoid,153.996
+soft,28.7938
+tanh,115.79
+tanf,39.333
