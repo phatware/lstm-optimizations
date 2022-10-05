@@ -396,11 +396,11 @@ int main(int argc, char ** argv)
 {
     // TODO: use command line parameters for data files
 
-    // const char* dataTrain = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatraining.txt";
-    // const char* dataTest  = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatest.txt";
+    const char* dataTrain = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatraining.txt";
+    const char* dataTest  = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatest.txt";
 
-    const char* dataTrain = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
-    const char* dataTest  = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
+    // const char* dataTrain = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
+    // const char* dataTest  = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
 
     // const char* dataTrain = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
     // const char* dataTest  = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
