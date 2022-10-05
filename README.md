@@ -7,8 +7,7 @@ reduce training time of LSTM RNN or similar networks that contain large
 number of neurons using tanh() activation function. This repo contains
 research materials on this new activation function.
 
-![](images/image1.png){width="1.4166666666666667in"
-height="1.0625in"}
+![Activation Function](images/media/image1.png)
 
 ## Motivation
 
@@ -35,44 +34,31 @@ and others.
 Below: tanh() -- BLUE, f() -- RED, softplus() -- GREEN.
 
 ### Function
-
-![](images/image2.png){width="6.502777777777778in"
-height="4.314583333333333in"}
+![Plot f(x), tanh(x), softplus(X)](images/media/image2.png)
 
 ### Derivative
+![Derivative](images/media/image3.png) or ![](images/media/image4.png)
 
-![](images/image3.png){width="1.9166666666666667in"
-height="1.0625in"} or
-![](images/image4.png){width="1.7291666666666667in"
-height="1.1145833333333333in"}
-
-![](images/image5.png){width="6.496527777777778in"
-height="4.313888888888889in"}
+![Derivative Plot](images/media/image5.png)
 
 ### Integral
+![](images/media/image6.png)
 
-![](images/image6.png){width="1.375in"
-height="0.8854166666666666in"}
+![Integral Plot](images/media/image7.png)
 
-Performance
-![](images/image7.png){width="6.501388888888889in"
-height="4.15625in"}
-
-Performance Analysis
+## Performance Analysis
 
 See notebooks in the repo. For example, below is the chart of a small
 LSTM NN training and prediction performance improvement when using the
 new activation function instead of tanh(). Network size between 10 and
 300 LSTM neurons doing multivariant weather prediction.
 
-![](images/image8.png){width="6.495833333333334in"
-height="2.5256944444444445in"}
+![Measurable performance improvement](images/media/image8.png)
 
 Note that the accuracy with the same hyperparameters is practically not
 affected.
 
-![](images/image9.png){width="6.495138888888889in"
-height="2.3868055555555556in"}
+![Same accuracy as tanh()](images/media/image9.png)
 
 ## TODO
 
