@@ -1,8 +1,8 @@
 # New Activation function for ML
 
-## Alternative to tanh() activation function
+## A faster alternative to tanh() activation function
 
-I present a new activation function that may improve performance and
+I present a new activation function that may improve NN performance and
 reduce training time of LSTM RNN or similar networks that contain large
 number of neurons using tanh() activation function. This repo contains
 research materials on this new activation function.
@@ -23,7 +23,8 @@ research materials on this new activation function.
 -   Providing faster classification or prediction results maybe
     important in mission critical applications
 
--   ...
+-   Are there any other function's characteristics that may be beneficial
+    in ML?
 
 ## Function attributes
 
@@ -60,7 +61,54 @@ affected.
 
 ![Same accuracy as tanh()](images/media/image9.png)
 
-## TODO
+## What's in this repo
+
+This repo contains research resources and test apps. Try running test apps on 
+your computer and record test results.
+
+### math-bench
+
+Simple app to measure performance of different math functions. 
+
+#### Linux/WSL and MAC OS
+
+To build and run the test execute `math-bench/test.sh`
+
+* Xcode command-line tools is required to compile this app.
+
+#### Windows 
+
+Open `math-bench\math-bench.sln` file with Visual Studio 2022. Run the solution.
+
+* Microsoft Visual Studio 2022 Community edition or better is required.
+
+### lstm-basic-test
+
+Very simple native (C++) LSTM network performance test. This is Up to 300 LSTM neurons, 
+single layer multivariate weather predictor network.
+
+#### Linux/WSL and MAC OS
+
+To build and run the test execute `lstm-basic-test/test.sh`
+
+* Xcode command-line tools is required to compile this app.
+
+#### Windows 
+
+Open `lstm-basic-test\lstm-basic-test.sln` file with Visual Studio 2022. Run the solution.
+
+* Microsoft Visual Studio 2022 Community edition or better is required.
+
+### Visualize Results
+
+Use provided jupyter notebooks to visualize results.
+
+* Python 3.8 with Tensorflow 2.7 or later is required 
+* To visualize `math-bench` results, open `performance_charts.ipynb`
+* To visualize `lstm-basic-test` results, open `lstm-stats.ipynb`
+
+
+## Next Steps / TODO
 
 -   Name this function!
 
@@ -83,4 +131,12 @@ affected.
 
 -   Test on CPU and GPU
 
--   ...
+-   Besides computational performance, explore any other potential benefits 
+    of using this function
+
+-   Besides LSTM networks, explore other types of NN where tanh() is heavily 
+    used
+
+    -   Maybe new types of networks/neurons using this activation function?
+
+- **TBD**
