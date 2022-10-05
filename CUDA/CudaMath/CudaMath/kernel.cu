@@ -1,4 +1,6 @@
 ﻿
+#define _INC_MATH
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "math_functions.h"
@@ -42,19 +44,19 @@ __global__ void addKernel(int *c, const int *a, const int *b)
 
 inline double tanf(double x)
 {
-    return x * std::sqrt(1.0 + x * x);
+    return x * sqrt(1.0 + x * x);
 }
 
 inline double sigmoid(double x)
 {
-    return 1.0 / (1.0 + std::exp(-x));
+    return 1.0 / (1.0 + exp(-x));
 }
 
 inline double elu(double x)
 {
     if (x > 0)
         return x;
-    return std::exp(x) - 1.0;
+    return exp(x) - 1.0;
 }
 
 inline double relu(double x)
@@ -73,7 +75,7 @@ inline double leaky_relu(double x, double a)
 
 inline double soft(double x)
 {
-    return x / (1.0 + std::abs(x));
+    return x / (1.0 + abs(x));
 }
 
 
