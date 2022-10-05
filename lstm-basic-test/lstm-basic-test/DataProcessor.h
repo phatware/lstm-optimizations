@@ -17,28 +17,19 @@ public:
     
     /**
      * normalize the given vector
-     * @param vec vector
-     * @param vecType vector type input or output
-     * @return normalized vector
      */
     std::vector<double> process(std::vector<double> vec, int vecType); 
     /**
      * post process the given vector
-     * @param vec vector
-     * @return processed vector
      */
     std::vector<double> postprocess(std::vector<double> vec);
     /**
      * post process a given double
-     * @param val
-     * @return 
      */
     double postProcess(double val);
     
     /**
      * Print the given vector
-     * @param vec vector
-     * @return 
      */
     int printVector(std::vector<double> vec);
     

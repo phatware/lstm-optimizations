@@ -7,6 +7,38 @@
 
 #include "LSTMNet.h"
 #include <functional>
+#include <algorithm>
+
+namespace binder {
+
+//template <class Arg, class Result>
+//struct unary_function {
+//    typedef Arg argument_type;
+//    typedef Result result_type;
+//};
+
+template <class Operation> class binder1st
+: public std::unary_function <typename Operation::second_argument_type,
+typename Operation::result_type>
+{
+protected:
+    Operation op;
+    typename Operation::first_argument_type value;
+public:
+    binder1st ( const Operation& x,
+               const typename Operation::first_argument_type& y) : op (x), value(y) {}
+    typename Operation::result_type
+    operator() (const typename Operation::second_argument_type& x) const
+    { return op(value,x); }
+};
+
+template <class Operation, class T>
+binder1st<Operation> bind1st (const Operation& op, const T& x)
+{
+    return binder1st<Operation>(op, typename Operation::first_argument_type(x));
+}
+
+}
 
 LSTMNet::LSTMNet(int memCells, int inputVecSize, bool newActivation) 
 {
@@ -256,25 +288,25 @@ int LSTMNet::train(std::vector<double> * input,
                 aDeltaWeightVecArr[j].begin(), 
                 aDeltaWeightVecArr[j].end(), 
                 aDeltaWeightVecArr[j].begin(), 
-                std::bind1st(std::multiplies<double>(), 0.1)
+                binder::bind1st(std::multiplies<double>(), 0.1)
             );
             std::transform(
                 iDeltaWeightVecArr[j].begin(), 
                 iDeltaWeightVecArr[j].end(), 
                 iDeltaWeightVecArr[j].begin(), 
-                std::bind1st(std::multiplies<double>(), 0.1)
+                binder::bind1st(std::multiplies<double>(), 0.1)
             );
             std::transform(
                 fDeltaWeightVecArr[j].begin(), 
                 fDeltaWeightVecArr[j].end(), 
                 fDeltaWeightVecArr[j].begin(), 
-                std::bind1st(std::multiplies<double>(), 0.1)
+                binder::bind1st(std::multiplies<double>(), 0.1)
             );
             std::transform(
                 oDeltaWeightVecArr[j].begin(), 
                 oDeltaWeightVecArr[j].end(), 
                 oDeltaWeightVecArr[j].begin(), 
-                std::bind1st(std::multiplies<double>(), 0.1)
+                binder::bind1st(std::multiplies<double>(), 0.1)
             );
                     
             std::transform(

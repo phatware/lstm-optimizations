@@ -48,6 +48,8 @@ typedef struct __tanf_profiler {
     history_t tanh;
 } tanf_profiler_t;
 
+#if 0
+
 static int univarPredicts(const char * inFile, const  char * outFile, bool useTanF) 
 {
     int memCells = 5; // number of memory cells
@@ -143,6 +145,8 @@ static int univarPredicts(const char * inFile, const  char * outFile, bool useTa
     // std::cout << std::scientific;
     return 0;
 }
+
+#endif // 0
 
 history_t multivarPredicts(bool useTanF,
                             const char * dataTrain, 
@@ -395,11 +399,14 @@ int main(int argc, char ** argv)
     // const char* dataTrain = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatraining.txt";
     // const char* dataTest  = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatest.txt";
 
-    const char* dataTrain = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
-    const char* dataTest  = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
+    // const char* dataTrain = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
+    // const char* dataTest  = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
+
+    const char* dataTrain = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
+    const char* dataTest  = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
 
     // TODO: also use command line
-    int cells_default[] = { 50, 100, 200, 300, 350, 500, 0 };
+    int cells_default[] = { 10, 25, 50, 75, 150, 100, 200, 300, 500, 0 };
     int* ptr = cells_default;
 
     history_t tsF, tsH;
@@ -411,10 +418,10 @@ int main(int argc, char ** argv)
         h->cellCount = *ptr;
         tsF = multivarPredicts(true, dataTrain, dataTest, *ptr);
         if (tsF.t1 == 0)
-            break;
+            return -1;
         tsH = multivarPredicts(false, dataTrain, dataTest, *ptr);
         if (tsH.t1 == 0)
-            break;
+            return -1;
         memcpy(&h->tanf, &tsF, sizeof(history_t));
         memcpy(&h->tanh, &tsH, sizeof(history_t));
         history.push_back(h);

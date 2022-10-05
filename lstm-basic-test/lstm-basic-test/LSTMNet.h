@@ -25,14 +25,6 @@ public:
     virtual ~LSTMNet();
     
     /**
-    * 
-    * @param input: training data set
-    * @param output: target values
-    * @param trainDataSize: training data size
-    * @param timeSteps: unfolding time steps
-    * @param learningRate
-    * @param iterations: training iterations
-    * @return 0
     */
     int train(std::vector<double> * input, std::vector<double> output, int trainDataSize, int timeSteps, double learningRate, int iterations);
     /**
@@ -41,8 +33,6 @@ public:
     * input: {t-n,...,t-2,t-1,t}
     * result: {t+1} 
     * 
-    * @param input: input vector for he prediction
-    * @return result: predicted value
     */
     double predict(std::vector<double> * input);
 
@@ -51,37 +41,23 @@ private:
     /**
      * Forward Propagation of the network
      *  
-     * @param input: input vector
-     * @param timeSteps: unfolded time steps in the input vector
-     * @return 0
      */
     int forward(std::vector<double> * input, int timeSteps);
     /**
      * Backward Propagation of the network
-     * 
-     * @param output: output from the forward propagation
-     * @param timeSteps: unfolded time steps
-     * @return 0
      */
     int backward(std::vector<double> output, int timeSteps);
     /**
      * Initialize the weights and bias values for the gates
      * Random initialization
-     * 
-     * @return 0
      */
     int initWeights();
     /**
      * Clear Vectors
-     * 
-     * @return 0
      */
     int clearVectors();
     /**
      * print the given vector
-     * 
-     * @param vec: vector
-     * @return 0 
      */
     int printVector(std::vector<double> vec);
     
