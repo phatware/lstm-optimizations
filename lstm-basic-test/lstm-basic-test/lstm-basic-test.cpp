@@ -399,11 +399,11 @@ int main(int argc, char ** argv)
     // const char* dataTrain = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatraining.txt";
     // const char* dataTest  = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatest.txt";
 
-    // const char* dataTrain = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
-    // const char* dataTest  = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
+    const char* dataTrain = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
+    const char* dataTest  = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
 
-    const char* dataTrain = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
-    const char* dataTest  = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
+    // const char* dataTrain = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
+    // const char* dataTest  = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
 
     // TODO: also use command line
     int cells_default[] = { 10, 25, 50, 75, 150, 100, 200, 300, 500, 0 };
