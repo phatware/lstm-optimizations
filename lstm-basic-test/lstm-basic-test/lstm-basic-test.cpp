@@ -153,7 +153,8 @@ history_t multivarPredicts(bool useTanF,
                             const char * dataTest, 
                             int memCells,
                             const char * outPath = NULL, 
-                            bool zeroMargin = true)
+                            bool zeroMargin = true,
+                            bool verbose = true)
 {
     // Multivariate time series data prediction 
 
@@ -342,41 +343,45 @@ history_t multivarPredicts(bool useTanF,
     if (NULL != input)
         delete [] input;
 
-    std::cout << std::endl;
-
-    std::cout << "----------------------" << std::endl;
-    std::cout << "Data " << std::endl;
-    std::cout << "----------------------" << std::endl;
-    std::cout << "Occupied    : " << occu << std::endl;
-    std::cout << "NotOccupied : " << notoccu << std::endl << std::endl;
-
-    std::cout << "----------------------" << std::endl;
-    std::cout << "margin: " << line << " min: " << min << " max: " << max << std::endl;
-    std::cout << "----------------------" << std::endl;
-    std::cout << "Correct predictions   : " << corr << std::endl;
-    std::cout << "Incorrect predictions : " << incorr << std::endl << std::endl;
-
-    std::cout << "----------------------" << std::endl;
-    std::cout << "Within the margin and 0" << std::endl;
-    std::cout << "----------------------" << std::endl;
-    std::cout << "Correct: " << corrNwMgn << std::endl;
-    std::cout << "Incorrect: " << incorrNwMgn << std::endl << std::endl << std::endl;
-
-    std::cout << "True Positive  : " << history.tp << std::endl;
-    std::cout << "True Negative  : " << history.tn << std::endl;
-    std::cout << "False Positive : " << history.fp << std::endl;
-    std::cout << "False Negative : " << history.fn << std::endl;
-
     history.acc = (corr / (double)predictions) * 100.0;
 
-    std::cout << std::endl << "Accuracy: " << history.acc << "%" << std::endl << std::endl;
+    if (verbose)
+    {
+        std::cout << std::endl;
 
-    std::cout << "----------------------" << std::endl;
-    std::cout << "Timeouts: " << line << std::endl;
-    std::cout << "----------------------" << std::endl;
-    std::cout << "Train   : " << history.t1 << std::endl;
-    std::cout << "Predict : " << history.t2 << std::endl;
-    std::cout << "**********************" << std::endl << std::endl;
+        std::cout << "----------------------" << std::endl;
+        std::cout << "Data " << std::endl;
+        std::cout << "----------------------" << std::endl;
+        std::cout << "Occupied    : " << occu << std::endl;
+        std::cout << "NotOccupied : " << notoccu << std::endl << std::endl;
+
+        std::cout << "----------------------" << std::endl;
+        std::cout << "margin: " << line << " min: " << min << " max: " << max << std::endl;
+        std::cout << "----------------------" << std::endl;
+        std::cout << "Correct predictions   : " << corr << std::endl;
+        std::cout << "Incorrect predictions : " << incorr << std::endl << std::endl;
+
+        std::cout << "----------------------" << std::endl;
+        std::cout << "Within the margin and 0" << std::endl;
+        std::cout << "----------------------" << std::endl;
+        std::cout << "Correct: " << corrNwMgn << std::endl;
+        std::cout << "Incorrect: " << incorrNwMgn << std::endl << std::endl << std::endl;
+
+        std::cout << "True Positive  : " << history.tp << std::endl;
+        std::cout << "True Negative  : " << history.tn << std::endl;
+        std::cout << "False Positive : " << history.fp << std::endl;
+        std::cout << "False Negative : " << history.fn << std::endl;
+
+
+        std::cout << std::endl << "Accuracy: " << history.acc << "%" << std::endl << std::endl;
+
+        std::cout << "----------------------" << std::endl;
+        std::cout << "Timeouts: " << line << std::endl;
+        std::cout << "----------------------" << std::endl;
+        std::cout << "Train   : " << history.t1 << std::endl;
+        std::cout << "Predict : " << history.t2 << std::endl;
+        std::cout << "**********************" << std::endl << std::endl;
+    }
 
     return history;
 }
@@ -392,38 +397,123 @@ inline void print_stat(const history_t* hist)
     std::cout << hist->fn;
 }
 
+static void usage()
+{
+    std::cout << "Usage: lstm-basic-test <data_dir> [-v] [-m] [-o <out_dir>]" << std::endl;
+}
+
 int main(int argc, char ** argv) 
 {
     // TODO: use command line parameters for data files
+    if (argc < 2)
+    {
+        usage();
+        return -1;
+    }
 
-    const char* dataTrain = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatraining.txt";
-    const char* dataTest  = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatest.txt";
+    bool verbose = false;
+    bool zeroMargin = true;
+    std::string folder = argv[1];
+    const char * outFolder = NULL;
+
+    for (int i = 2; i < argc; i++)
+    {
+        if (argv[i][0] == '-')
+        {
+            switch(argv[i][1])
+            {
+                case 'v' :
+                case 'V' :
+                    verbose = true;
+                    break;
+
+                case 'o' :
+                case 'O' :
+                    if (i+1 >= argc)
+                    {
+                        usage();
+                        return -1;
+                    }
+                    i++;
+                    outFolder = argv[i];
+                    break;
+
+                case 'm' :
+                case 'M' :
+                    zeroMargin = false;
+                    break;
+            }
+        }
+    }
+
+    // const char* dataTrain = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatraining.txt";
+    // const char* dataTest  = "C:\\WORK\\ML\\tanf\\lstm-basic-test\\data\\datatest.txt";
 
     // const char* dataTrain = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
     // const char* dataTest  = "/home/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
 
-    // const char* dataTrain = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatraining.txt";
-    // const char* dataTest  = "/Users/stan/work/ML/tanf/lstm-basic-test/data/datatest.txt";
+    std::string dataTrain = folder + "/datatraining.txt";
+    std::string dataTest  = folder + "/datatest.txt";
 
     // TODO: also use command line
-    int cells_default[] = { 10, 25, 50, 75, 150, 100, 200, 300, 500, 0 };
+    int cells_default[] = { 10, 25, 50, 75, 100, 150, 200, 250, 300, 0 };
     int* ptr = cells_default;
-
+    size_t total = 2 * (sizeof(cells_default)/sizeof(int) - 1);
     history_t tsF, tsH;
     std::vector<tanf_profiler_t *> history;
+    const int RETRY_LOOP_SIZE = 5;
 
-    while (0 != *ptr)
+    for (size_t step = 0; *ptr != 0;)
     {
+        std::cout << "Step " << ++step << " of " << total << std::endl;
         tanf_profiler_t* h = new tanf_profiler_t;
+        memset(h, 0, sizeof(tanf_profiler_t));
         h->cellCount = *ptr;
-        tsF = multivarPredicts(true, dataTrain, dataTest, *ptr);
-        if (tsF.t1 == 0)
-            return -1;
-        tsH = multivarPredicts(false, dataTrain, dataTest, *ptr);
-        if (tsH.t1 == 0)
-            return -1;
-        memcpy(&h->tanf, &tsF, sizeof(history_t));
-        memcpy(&h->tanh, &tsH, sizeof(history_t));
+        
+        for (int i = 0; i < RETRY_LOOP_SIZE; i++ )
+        {
+            tsF = multivarPredicts(true, dataTrain.c_str(), dataTest.c_str(), *ptr, outFolder, zeroMargin, verbose);
+            if (tsF.t1 == 0)
+                return -1;
+            h->tanf.acc += tsF.acc;
+            h->tanf.fn += tsF.fn;
+            h->tanf.fp += tsF.fp;
+            h->tanf.tp += tsF.tp;
+            h->tanf.tn += tsF.tn;
+            h->tanf.t1 += tsF.t1;
+            h->tanf.t2 += tsF.t2;
+        }
+        h->tanf.acc /= RETRY_LOOP_SIZE;
+        h->tanf.fn /= RETRY_LOOP_SIZE;
+        h->tanf.fp /= RETRY_LOOP_SIZE;
+        h->tanf.tp /= RETRY_LOOP_SIZE;
+        h->tanf.tn /= RETRY_LOOP_SIZE;
+        h->tanf.t1 /= RETRY_LOOP_SIZE;
+        h->tanf.t2 /= RETRY_LOOP_SIZE;
+
+        std::cout << "Step " << ++step << " of " << total << std::endl;
+
+        for (int i = 0; i < RETRY_LOOP_SIZE; i++ )
+        {
+            tsH = multivarPredicts(false, dataTrain.c_str(), dataTest.c_str(), *ptr, outFolder, zeroMargin, verbose);
+            if (tsH.t1 == 0)
+                return -1;
+            h->tanh.acc += tsH.acc;
+            h->tanh.fn += tsH.fn;
+            h->tanh.fp += tsH.fp;
+            h->tanh.tp += tsH.tp;
+            h->tanh.tn += tsH.tn;
+            h->tanh.t1 += tsH.t1;
+            h->tanh.t2 += tsH.t2;
+        }
+        h->tanh.acc /= RETRY_LOOP_SIZE;
+        h->tanh.fn /= RETRY_LOOP_SIZE;
+        h->tanh.fp /= RETRY_LOOP_SIZE;
+        h->tanh.tp /= RETRY_LOOP_SIZE;
+        h->tanh.tn /= RETRY_LOOP_SIZE;
+        h->tanh.t1 /= RETRY_LOOP_SIZE;
+        h->tanh.t2 /= RETRY_LOOP_SIZE;
+
         history.push_back(h);
         ptr++;
     }
