@@ -12,19 +12,26 @@ research materials on this new activation function.
 ## Motivation
 
 -   Tanh() is the slowest (to compute) activation function used in ML.
-    In LSTM neurons there are 2 independent tanh()
+    For example, in LSTM neurons there are 2 independent tanh()
 
 -   Depending on the CPU/C++ compiler implementation (usually high
     performance ML code is written in C++) tanh() maybe relatively slow,
     especially on thin clients and IoT devices
 
--   Reducing NN training time saves money!
+-   Reducing NN training time saves money! And energy! 
+    *This function is environmentally friendly!*
 
--   Providing faster classification or prediction results maybe
+-   Providing even marginally faster classification or prediction results maybe
     important in mission critical applications
 
 -   Are there any other function's characteristics that may be beneficial
-    in ML?
+    in ML applications?
+
+-   Preliminary results show 1-2% acceleration of training, classification 
+    and prediction with LSTM networks of relatively small size, while no notable 
+    decrease in learning rate or accuracy was detected.
+
+-   Expect even better results with larger LSTM RNNs
 
 ## Function attributes
 
@@ -32,7 +39,7 @@ Here I compare the above activation function with tanh() and softplus()
 activation functions used in many ML packages such as Tensorflow, Torch
 and others.
 
-Below: tanh() -- BLUE, f() -- RED, softplus() -- GREEN.
+Below: **tanh() -- BLUE, f() -- RED, softplus() -- GREEN**.
 
 ### Function
 ![Plot f(x), tanh(x), softplus(X)](images/media/image2.png)
@@ -107,14 +114,13 @@ Use provided jupyter notebooks to visualize results.
 * To visualize `math-bench` results, open `performance_charts.ipynb`
 * To visualize `lstm-basic-test` results, open `lstm-stats.ipynb`
 
-
 ## Next Steps / TODO
 
 -   Name this function!
 
--   Natively (C++!) Add new activation function to a commonly used ML
-    package such as Torch or Tensorflow and replace tanh() activation
-    with it in LSTM neuron by default (others?)
+-   Natively (in C++) add new activation function to a commonly used ML
+    package such as Torch or Tensorflow then replace tanh() activation
+    in LSTM neuron by default (others?)
 
     -   Performance tests must be done natively
 
@@ -124,19 +130,49 @@ Use provided jupyter notebooks to visualize results.
     -   Research only networks that contain large number of tanh()
         activations
 
--   Test accuracy when using new activation function and compare results
-    to same networks using tanh()
+-   Test accuracy when using new activation function comparing to tanh()
 
-    -   This maybe done in python or other scripting language
+    -   Assuming computational performance testing here is not a goal,
+        this can done in python or other scripting language (R?)
 
--   Test on CPU and GPU
+-   Test on CPU and GPU (Cuda)
+
+    -   I included a very basic benchmark test compiled with CUDA libraries on 
+        Windows, but I am not sure GPU actually computes advanced math functions
+        like exp() or tanh()
+    
+    -   More research on GPU is needed
+
+-   Start and keep updating list of references for future publications
+
+-   Write/publish a research paper, when confident with test results and have enough 
+    research materials/references
+
+    -   *Is it patentable?* I don't think the function itself is, but maybe there is 
+        a specific application of this or similar equation besides a generic activation
+        (like a significant hardware acceleration or new more efficient network type)
+        that may be patentable. This needs to be researched.
 
 -   Besides computational performance, explore any other potential benefits 
-    of using this function
+    of this function
 
 -   Besides LSTM networks, explore other types of NN where tanh() is heavily 
     used
 
     -   Maybe new types of networks/neurons using this activation function?
+
+-   Was this function researched already for ML? I did not find any references so
+    far...
+
+-   Because this function is simpler to compute comparing to tanh() or exp(), is any
+    hardware acceleration/GPU possible? Especially for wide classifiers, for example, 
+    as an optimization of the dot() product?
+    
+        -   Note: this function uses only multiplication, division, and addition 
+            plus a square root: no loops/repeated operations and square root is fast! 
+
+        -   Possible research area: in some cases it may be possible to avoid square root by 
+            squaring the entire NN and only taking square root at the end.
+
 
 - **TBD**
