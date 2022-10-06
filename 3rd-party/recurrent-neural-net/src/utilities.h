@@ -94,6 +94,7 @@ void 	vector_store_ascii(double *, int, FILE *);
 
 // Memory
 void*   e_calloc(size_t count, size_t size);
-size_t  e_alloc_total();
+size_t  e_alloc_total(void);
+
 #endif
 
