@@ -155,13 +155,14 @@ int LSTMNet::backward(std::vector<double> output, int timeSteps)
             xTan = memCellStateArr[j].at(i + 1);
             if (useTanF)
             {
-                // derivative of tanf
-                yTan = tanf(xTan);
-                dTan = (yTan/xTan) * (1.0 - yTan * yTan);
+                // derivative of tanf: y' = 1/(1+x^2)^(3/2) or, expressed via y: y' = (1-y^2)^(3/2)
+                // use the second equ if we know the value of y(x) already
+                yTan = 1.0 / (1.0 + xTan * xTan);
+                dTan = sqrt(yTan * yTan * yTan);
             }
             else
             {
-                // derivative of tanh
+                // derivative of tanh' = (1-tanh^2)
                 yTan = tanh(xTan);
                 dTan = (1.0 - yTan * yTan);
             }

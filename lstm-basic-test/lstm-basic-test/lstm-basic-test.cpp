@@ -397,7 +397,7 @@ inline void print_stat(const history_t* hist)
 
 static void usage()
 {
-    std::cout << "Usage: lstm-basic-test <data_dir> [-v] [-m] [-o <out_dir>] [-i <N>] [-l <lr>]" << std::endl;
+    std::cout << "Usage: lstm-basic-test <data_dir> [-v] [-m] [-o <out_dir>] [-i <n>] [-l <lr>] [-n <n>]" << std::endl;
 }
 
 int main(int argc, char ** argv) 
@@ -415,6 +415,7 @@ int main(int argc, char ** argv)
     const char * outFolder = NULL;
     double learningRate = 0.0001;
     int steps = 1;
+    int neurons[2] = { 0, 0 };
 
     for (int i = 2; i < argc; i++)
     {
@@ -475,10 +476,25 @@ int main(int argc, char ** argv)
                     }
                     break;
 
+                case 'n' :
+                case 'N' :
+                    if (i + 1 >= argc)
+                    {
+                        usage();
+                        return -1;
+                    }
+                    i++;
+                    neurons[0] = atoi(argv[i]);
+                    if (neurons[0] < 1 || neurons[0] > 1000)
+                    {
+                        usage();
+                        return -1;
+                    }
+                    break;
+
                 default :
                     usage();
                     return -1;
-
             }
         }
         else
@@ -503,7 +519,15 @@ int main(int argc, char ** argv)
     size_t total = 2 * (sizeof(cells_default)/sizeof(int) - 1);
     history_t tsF, tsH;
     std::vector<tanf_profiler_t *> history;
-    const int RETRY_LOOP_SIZE = 5;
+    int RETRY_LOOP_SIZE = 5;
+
+    if (neurons[0] > 0)
+    {
+        // once setting only once!
+        ptr = neurons;
+        total = 2;
+        RETRY_LOOP_SIZE = 1;
+    }
 
     for (size_t step = 0; *ptr != 0;)
     {
