@@ -154,15 +154,15 @@ history_t multivarPredicts(bool useTanF,
                             int memCells,
                             const char * outPath = NULL, 
                             bool zeroMargin = true,
-                            bool verbose = true)
+                            bool verbose = true,
+                            double learningRate = 0.0001,
+                            int timeSteps = 1,  // data points used for one forward step
+                            int iterations = 10)
 {
     // Multivariate time series data prediction 
 
     int inputVecSize = 5; // input vector size
     int trainDataSize = 5000; // train data size
-    int timeSteps = 1; // data points used for one forward step
-    double learningRate = 0.0001;
-    int iterations = 10; // training iterations with training data
     int lines = 5000;
 
     DataProcessor dataproc;
@@ -320,10 +320,7 @@ history_t multivarPredicts(bool useTanF,
                 else
                     incorrNwMgn++;
             }
-        }
-        else
-        {
-            if ((resultVec.at(i) > line) && (resultVec.at(i) < 0))
+            else if ((resultVec.at(i) > line) && (resultVec.at(i) < 0))
             {
                 if (timeSeries[lines].at(i) == 1)
                     corrNwMgn++;
@@ -361,17 +358,18 @@ history_t multivarPredicts(bool useTanF,
         std::cout << "Correct predictions   : " << corr << std::endl;
         std::cout << "Incorrect predictions : " << incorr << std::endl << std::endl;
 
-        std::cout << "----------------------" << std::endl;
-        std::cout << "Within the margin and 0" << std::endl;
-        std::cout << "----------------------" << std::endl;
-        std::cout << "Correct: " << corrNwMgn << std::endl;
-        std::cout << "Incorrect: " << incorrNwMgn << std::endl << std::endl << std::endl;
-
+        if (line > 0)
+        {
+            std::cout << "----------------------" << std::endl;
+            std::cout << "Within the margin and 0" << std::endl;
+            std::cout << "----------------------" << std::endl;
+            std::cout << "Correct: " << corrNwMgn << std::endl;
+            std::cout << "Incorrect: " << incorrNwMgn << std::endl << std::endl << std::endl;
+        }
         std::cout << "True Positive  : " << history.tp << std::endl;
         std::cout << "True Negative  : " << history.tn << std::endl;
         std::cout << "False Positive : " << history.fp << std::endl;
         std::cout << "False Negative : " << history.fn << std::endl;
-
 
         std::cout << std::endl << "Accuracy: " << history.acc << "%" << std::endl << std::endl;
 
@@ -399,7 +397,7 @@ inline void print_stat(const history_t* hist)
 
 static void usage()
 {
-    std::cout << "Usage: lstm-basic-test <data_dir> [-v] [-m] [-o <out_dir>]" << std::endl;
+    std::cout << "Usage: lstm-basic-test <data_dir> [-v] [-m] [-o <out_dir>] [-i <N>] [-l <lr>]" << std::endl;
 }
 
 int main(int argc, char ** argv) 
@@ -415,6 +413,8 @@ int main(int argc, char ** argv)
     bool zeroMargin = true;
     std::string folder = argv[1];
     const char * outFolder = NULL;
+    double learningRate = 0.0001;
+    int steps = 1;
 
     for (int i = 2; i < argc; i++)
     {
@@ -442,7 +442,49 @@ int main(int argc, char ** argv)
                 case 'M' :
                     zeroMargin = false;
                     break;
+
+                case 'l' :
+                case 'L' :
+                    if (i+1 >= argc)
+                    {
+                        usage();
+                        return -1;
+                    }
+                    i++;
+                    learningRate = atof(argv[i]);
+                    if (learningRate <= 0 || learningRate >= 1.0)
+                    {
+                        usage();
+                        return -1;
+                    }
+                    break;
+
+                case 's' :
+                case 'S' :
+                    if (i+1 >= argc)
+                    {
+                        usage();
+                        return -1;
+                    }
+                    i++;
+                    steps = atoi(argv[i]);
+                    if (steps < 1 || steps > 100)
+                    {
+                        usage();
+                        return -1;
+                    }
+                    break;
+
+                default :
+                    usage();
+                    return -1;
+
             }
+        }
+        else
+        {
+            usage();
+            return -1;
         }
     }
 
@@ -472,7 +514,8 @@ int main(int argc, char ** argv)
         
         for (int i = 0; i < RETRY_LOOP_SIZE; i++ )
         {
-            tsF = multivarPredicts(true, dataTrain.c_str(), dataTest.c_str(), *ptr, outFolder, zeroMargin, verbose);
+            tsF = multivarPredicts(true, dataTrain.c_str(), dataTest.c_str(), *ptr, 
+                                   outFolder, zeroMargin, verbose, learningRate, steps);
             if (tsF.t1 == 0)
                 return -1;
             h->tanf.acc += tsF.acc;
@@ -495,7 +538,8 @@ int main(int argc, char ** argv)
 
         for (int i = 0; i < RETRY_LOOP_SIZE; i++ )
         {
-            tsH = multivarPredicts(false, dataTrain.c_str(), dataTest.c_str(), *ptr, outFolder, zeroMargin, verbose);
+            tsH = multivarPredicts(false, dataTrain.c_str(), dataTest.c_str(), *ptr, 
+                                   outFolder, zeroMargin, verbose, learningRate, steps);
             if (tsH.t1 == 0)
                 return -1;
             h->tanh.acc += tsH.acc;
