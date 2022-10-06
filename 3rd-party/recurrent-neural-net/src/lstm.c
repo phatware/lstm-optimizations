@@ -2025,6 +2025,8 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                 if ( fp_progress_output != NULL )
                 {
                     fprintf(fp_progress_output, "%s====== Iteration: %u, loss: %.5lf ======\n", n==0 ? "" : "\n", n, loss);
+                    printf("==== %s: Backward time: %.3f.  Forward time: %.3f ======\n",
+                           params->use_tanf != 0 ? "TANF" : "TANH", total_bw_time, total_fw_time);
                     lstm_output_string_layers_to_file(fp_progress_output, model_layers, char_index_mapping, X_train[b], print_progress_number_of_chars, layers);
                     fclose(fp_progress_output);
                 }

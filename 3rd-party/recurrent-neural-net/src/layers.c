@@ -208,7 +208,7 @@ void  tanf_backward(double* dldY, double* Y, double* dldX, int L)
     double t;
     while ( l < L )
     {
-        t = 1.0 / (1.0 - Y[l] * Y[l]);
+        t = (1.0 - Y[l] * Y[l]);
         dldX[l] = sqrt(t * t * t) * dldY[l];
         ++l;
     }
