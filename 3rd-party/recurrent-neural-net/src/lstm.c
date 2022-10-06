@@ -22,6 +22,10 @@
  */
 
 #include "lstm.h"
+#include <time.h>
+
+double total_fw_time = 0;
+double total_bw_time = 0;
 
 void lstm_init_fail(const char * msg)
 {
@@ -557,8 +561,7 @@ void lstm_values_next_state_free(lstm_values_state_t* d_next)
     free(d_next);
 }
 
-// model, input, state and cache values, &probs, whether or not to apply softmax
-void lstm_forward_propagate(lstm_model_t* model, double *input,
+static void lstm_forward_propagate_internal(lstm_model_t* model, double *input,
                             lstm_values_cache_t* cache_in, lstm_values_cache_t* cache_out,
                             int softmax)
 {
@@ -657,8 +660,21 @@ void lstm_forward_propagate(lstm_model_t* model, double *input,
 #endif
     
 }
+
+// model, input, state and cache values, &probs, whether or not to apply softmax
+void lstm_forward_propagate(lstm_model_t* model, double *input,
+                            lstm_values_cache_t* cache_in, lstm_values_cache_t* cache_out,
+                            int softmax)
+{
+    time_t prg_begin, prg_end;
+    prg_begin = clock();
+    lstm_forward_propagate_internal(model, input, cache_in, cache_out, softmax);
+    prg_end = clock();
+    total_fw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
+}
+
 //                            model, y_probabilities, y_correct, the next deltas, state and cache values, &gradients, &the next deltas
-void lstm_backward_propagate(lstm_model_t* model, double* y_probabilities, int y_correct,
+static void lstm_backward_propagate_internal(lstm_model_t* model, double* y_probabilities, int y_correct,
                              lstm_values_next_cache_t* d_next, lstm_values_cache_t* cache_in,
                              lstm_model_t* gradients, lstm_values_next_cache_t* cache_out)
 {
@@ -742,6 +758,20 @@ void lstm_backward_propagate(lstm_model_t* model, double* y_probabilities, int y
     // To pass on to next layer
     copy_vector(cache_out->dldY_pass, &gradients->dldXi[N], model->X);
 }
+
+// model, input, state and cache values, &probs, whether or not to apply softmax
+void lstm_backward_propagate(lstm_model_t* model, double* y_probabilities, int y_correct,
+                                  lstm_values_next_cache_t* d_next, lstm_values_cache_t* cache_in,
+                                  lstm_model_t* gradients, lstm_values_next_cache_t* cache_out)
+{
+    time_t prg_begin, prg_end;
+    prg_begin = clock();
+    lstm_backward_propagate_internal(model, y_probabilities,
+                                     y_correct, d_next, cache_in, gradients, cache_out);
+    prg_end = clock();
+    total_bw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
+}
+
 
 void lstm_zero_the_model(lstm_model_t * model)
 {
@@ -1348,9 +1378,11 @@ void lstm_output_string_layers_to_file(FILE * fp,lstm_model_t ** model_layers,
         lstm_forward_propagate(model_layers[p], first_layer_input,
                                caches_layer[p][i % 2], caches_layer[p][(i+1)%2], p == 0);
         
-        if ( p > 0 ) {
+        if ( p > 0 )
+        {
             --p;
-            while ( p >= 0 ) {
+            while ( p >= 0 )
+            {
                 lstm_forward_propagate(model_layers[p], caches_layer[p+1][(i+1)%2]->probs,
                                        caches_layer[p][i % 2], caches_layer[p][(i+1)%2], p == 0);
                 --p;
@@ -1365,7 +1397,8 @@ void lstm_output_string_layers_to_file(FILE * fp,lstm_model_t ** model_layers,
     }
     
     p = 0;
-    while ( p < layers ) {
+    while ( p < layers )
+    {
         b = 0;
         while ( b < 2 ) {
             lstm_cache_container_free( caches_layer[p][b]);
@@ -1423,7 +1456,8 @@ void lstm_output_string_layers(lstm_model_t ** model_layers, set_t* char_index_m
     lstm_cache_container_set_start(caches_layer[0][0], N);
     lstm_cache_container_set_start(caches_layer[0][0], N);
     
-    while ( i < numbers_to_display ) {
+    while ( i < numbers_to_display )
+    {
         
         index = set_char_to_indx(char_index_mapping,input);
         
@@ -1698,7 +1732,8 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
     i = 0;
     cache_layers = e_calloc(layers, sizeof(lstm_values_cache_t**));
     
-    while ( i < layers ) {
+    while ( i < layers )
+    {
         cache_layers[i] = e_calloc(params->mini_batch_size + 1,
                                    sizeof(lstm_values_cache_t*));
         
@@ -1728,7 +1763,8 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
     }
     
     i = 0;
-    while ( i < layers ) {
+    while ( i < layers )
+    {
         lstm_init_model(model_layers[i]->X,
                         model_layers[i]->N, model_layers[i]->Y,
                         &gradient_layers[i], 1, params);
@@ -1749,9 +1785,11 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
     }
     
     i = 0; b = 0;
-    while ( n < iterations ) {
+    while ( n < iterations )
+    {
         
-        if ( epochs && epoch >= epochs ) {
+        if ( epochs && epoch >= epochs )
+        {
             // We have done enough iterations now
             break;
         }
@@ -1784,14 +1822,17 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         
         q = 0;
         
-        while ( q < trailing ) {
+        // forward propogate
+        while ( q < trailing )
+        {
             e1 = q;
             e2 = q + 1;
             
             e3 = i % training_points;
             
             tmp_count = 0;
-            while ( tmp_count < model_layers[0]->Y ) {
+            while ( tmp_count < model_layers[0]->Y )
+            {
                 first_layer_input[tmp_count] = 0.0;
                 ++tmp_count;
             }
@@ -1806,9 +1847,11 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                                    cache_layers[p][e2],
                                    p == 0);
             
-            if ( p > 0 ) {
+            if ( p > 0 )
+            {
                 --p;
-                while ( p <= layers - 1 ) {
+                while ( p <= layers - 1 )
+                {
                     lstm_forward_propagate(model_layers[p],
                                            cache_layers[p+1][e2]->probs,
                                            cache_layers[p][e1],
@@ -1833,34 +1876,41 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         if ( n == 0 )
             record_keeper = loss;
         
-        if ( loss < record_keeper ) {
+        if ( loss < record_keeper )
+        {
             record_keeper = loss;
             record_iteration = n;
         }
         
-        if ( stateful ) {
+        if ( stateful )
+        {
             p = 0;
-            while ( p < layers ) {
+            while ( p < layers )
+            {
                 lstm_next_state_copy(stateful_d_next[p], cache_layers[p][e2], model_layers[p]->N, 1);
                 ++p;
             }
         }
         
         p = 0;
-        while ( p < layers ) {
+        while ( p < layers )
+        {
             lstm_zero_the_model(gradient_layers[p]);
             lstm_zero_d_next(d_next_layers[p], model_layers[p]->X, model_layers[p]->N);
             ++p;
         }
         
-        while ( q > 0 ) {
+        // Back propogate
+        while ( q > 0 )
+        {
             e1 = q;
             e2 = q - 1;
             
             e3 = ( training_points + i - 1 ) % training_points;
             
             p = 0;
-            while ( p < layers ) {
+            while ( p < layers )
+            {
                 lstm_zero_the_model(gradient_layers_entry[p]);
                 ++p;
             }
@@ -1874,9 +1924,11 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                                     gradient_layers_entry[0],
                                     d_next_layers[p]);
             
-            if ( p < layers ) {
+            if ( p < layers )
+            {
                 ++p;
-                while ( p < layers ) {
+                while ( p < layers )
+                {
                     lstm_backward_propagate(model_layers[p],
                                             d_next_layers[p-1]->dldY_pass,
                                             -1,
@@ -1914,9 +1966,11 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         
         p = 0;
         
-        switch ( params->optimizer ) {
+        switch ( params->optimizer )
+        {
             case OPTIMIZE_ADAM:
-                while ( p < layers ) {
+                while ( p < layers )
+                {
                     gradients_adam_optimizer(
                                              model_layers[p],
                                              gradient_layers[p],
@@ -1945,26 +1999,31 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                 break;
         }
         
-        if ( print_progress && !( n % print_progress_iterations ) ) {
-            
+        if ( print_progress && !( n % print_progress_iterations ) )
+        {
             memset(time_buffer, '\0', sizeof time_buffer);
             time(&time_iter);
             strftime(time_buffer, sizeof time_buffer, "%X", localtime(&time_iter));
             
             printf("%s Iteration: %u (epoch: %u), Loss: %lf, record: %lf (iteration: %d), LR: %lf\n",
                    time_buffer, n, epoch, loss, record_keeper, record_iteration, params->learning_rate);
+            printf("Using %s: Total backward time: %.3f  Total forward time: %.3f\n",
+                   params->use_tanf != 0 ? "TANF" : "TANH", total_bw_time, total_fw_time);
             
-            if ( print_progress_sample_output ) {
+            if ( print_progress_sample_output )
+            {
                 printf("=====================================================\n");
                 lstm_output_string_layers(model_layers, char_index_mapping, X_train[b],
                                           print_progress_number_of_chars, layers);
                 printf("\n=====================================================\n");
             }
             
-            if ( print_progress_to_file ) {
+            if ( print_progress_to_file )
+            {
                 FILE * fp_progress_output = fopen(print_progress_to_file_name,
                                                   print_progress_to_file_arg);
-                if ( fp_progress_output != NULL ) {
+                if ( fp_progress_output != NULL )
+                {
                     fprintf(fp_progress_output, "%s====== Iteration: %u, loss: %.5lf ======\n", n==0 ? "" : "\n", n, loss);
                     lstm_output_string_layers_to_file(fp_progress_output, model_layers, char_index_mapping, X_train[b], print_progress_number_of_chars, layers);
                     fclose(fp_progress_output);

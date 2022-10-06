@@ -11,7 +11,6 @@
 		F629AADA28EE9E0900D73E02 /* layers.c in Sources */ = {isa = PBXBuildFile; fileRef = F629AAD028EE9E0900D73E02 /* layers.c */; };
 		F629AADB28EE9E0900D73E02 /* set.c in Sources */ = {isa = PBXBuildFile; fileRef = F629AAD128EE9E0900D73E02 /* set.c */; };
 		F629AADC28EE9E0900D73E02 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = F629AAD428EE9E0900D73E02 /* main.c */; };
-		F629AADD28EE9E0900D73E02 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = F629AAD628EE9E0900D73E02 /* Makefile */; };
 		F629AADE28EE9E0900D73E02 /* lstm.c in Sources */ = {isa = PBXBuildFile; fileRef = F629AAD828EE9E0900D73E02 /* lstm.c */; };
 /* End PBXBuildFile section */
 
@@ -29,7 +28,6 @@
 
 /* Begin PBXFileReference section */
 		F629AAC328EE9DCE00D73E02 /* recurrent-neural-net */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "recurrent-neural-net"; sourceTree = BUILT_PRODUCTS_DIR; };
-		F629AACD28EE9E0900D73E02 /* meson.build */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = meson.build; sourceTree = "<group>"; };
 		F629AACE28EE9E0900D73E02 /* utilities.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = utilities.c; sourceTree = "<group>"; };
 		F629AACF28EE9E0900D73E02 /* utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utilities.h; sourceTree = "<group>"; };
 		F629AAD028EE9E0900D73E02 /* layers.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = layers.c; sourceTree = "<group>"; };
@@ -38,7 +36,6 @@
 		F629AAD328EE9E0900D73E02 /* std_conf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = std_conf.h; sourceTree = "<group>"; };
 		F629AAD428EE9E0900D73E02 /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		F629AAD528EE9E0900D73E02 /* layers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = layers.h; sourceTree = "<group>"; };
-		F629AAD628EE9E0900D73E02 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		F629AAD728EE9E0900D73E02 /* set.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = set.h; sourceTree = "<group>"; };
 		F629AAD828EE9E0900D73E02 /* lstm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = lstm.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -78,8 +75,6 @@
 				F629AAD828EE9E0900D73E02 /* lstm.c */,
 				F629AAD228EE9E0900D73E02 /* lstm.h */,
 				F629AAD428EE9E0900D73E02 /* main.c */,
-				F629AAD628EE9E0900D73E02 /* Makefile */,
-				F629AACD28EE9E0900D73E02 /* meson.build */,
 				F629AAD128EE9E0900D73E02 /* set.c */,
 				F629AAD728EE9E0900D73E02 /* set.h */,
 				F629AAD328EE9E0900D73E02 /* std_conf.h */,
@@ -146,7 +141,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F629AADD28EE9E0900D73E02 /* Makefile in Sources */,
 				F629AADE28EE9E0900D73E02 /* lstm.c in Sources */,
 				F629AADC28EE9E0900D73E02 /* main.c in Sources */,
 				F629AADB28EE9E0900D73E02 /* set.c in Sources */,
