@@ -202,14 +202,18 @@ void  tanf_forward(double* Y, double* X, int L)
     }
 }
 //    Y = tanhf(X), dldY, Y, &dldX, length
-void  tanf_backward(double* dldY, double* Y, double* dldX, int L)
+void  tanf_backward(double* dldY, double* Y, double* dldX, int L, int td)
 {
     int l = 0;
     double t;
     while ( l < L )
     {
+        // TODO: test derivative (overfitting faster than tanh()?)
         t = (1.0 - Y[l] * Y[l]);
-        dldX[l] = sqrt(t * t * t) * dldY[l];
+        if (td)
+            dldX[l] = sqrt(t * t * t) * dldY[l];
+        else
+            dldX[l] = t * dldY[l];
         ++l;
     }
 }

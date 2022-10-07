@@ -720,7 +720,7 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, double* y_prob
     vectors_multiply(dldc, cache_in->ho, N);
     
     if (model->params->use_tanf)
-        tanf_backward(dldc, cache_in->tanh_c_cache, dldc, N);
+        tanf_backward(dldc, cache_in->tanh_c_cache, dldc, N, model->params->true_der);
     else
         tanh_backward(dldc, cache_in->tanh_c_cache, dldc, N);
 
@@ -737,7 +737,7 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, double* y_prob
     copy_vector(dldhc, cache_in->hi, N);
     vectors_multiply(dldhc, dldc, N);
     if (model->params->use_tanf)
-        tanf_backward(dldhc, cache_in->hc, dldhc, N);
+        tanf_backward(dldhc, cache_in->hc, dldhc, N, model->params->true_der);
     else
         tanh_backward(dldhc, cache_in->hc, dldhc, N);
     
@@ -1321,7 +1321,7 @@ void lstm_output_string_layers_to_file(FILE * fp,lstm_model_t ** model_layers,
     int Y = model_layers[0]->Y;
     int N = model_layers[0]->N;
 #ifdef WINDOWS
-    double *first_layer_input;
+    double *first_layer_input = NULL;
 #else
     double first_layer_input[Y];
 #endif
@@ -1643,13 +1643,14 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
 #endif
 }
 
-void lstm_store_progress(const char* filename, unsigned int n, double loss)
+void lstm_store_progress(const char* filename, unsigned int n, double loss, const char * tnh)
 {
     FILE * fp;
     
     fp = fopen(filename, "a");
-    if ( fp != NULL ) {
-        fprintf(fp, "%u,%lf\n",n,loss);
+    if ( fp != NULL )
+    {
+        fprintf(fp, "%s,%u,%lf,%lf,%lf\n", tnh, n, loss, total_fw_time, total_bw_time);
         fclose(fp);
     }
     
@@ -2037,9 +2038,13 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         }
         
         if ( store_progress_every_x_iterations && !(n % store_progress_every_x_iterations ))
-            lstm_store_progress(store_progress_file_name, n, loss);
+        {
+            const char * th = params->use_tanf ? (params->true_der ? "tanf-truD" : "tanf-tanD") : "tanh";
+            lstm_store_progress(store_progress_file_name, n, loss, th);
+        }
         
-        if ( store_network_every && !(n % store_network_every) ) {
+        if ( store_network_every && !(n % store_network_every) )
+        {
             lstm_store(
                        params->store_network_name_raw,
                        char_index_mapping,

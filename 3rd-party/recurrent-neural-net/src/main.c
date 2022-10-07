@@ -89,9 +89,17 @@ void parse_input_args(int argc, char** argv)
     
     while ( a < argc )
     {
-        if ( !strcmp(argv[a], "-tf") ) {
+        if ( !strcmp(argv[a], "-tf") )
+        {
             // no attribute
             params.use_tanf = 1;
+            a++;
+            continue;
+        }
+        else if ( !strcmp(argv[a], "-td") )
+        {
+            // no attribute
+            params.true_der = 1;
             a++;
             continue;
         }
@@ -99,38 +107,45 @@ void parse_input_args(int argc, char** argv)
         if ( argc <= (a+1) )
             break; // All flags have values attributed to them
         
-        if ( !strcmp(argv[a], "-r") ) {
+        if ( !strcmp(argv[a], "-r") )
+        {
             read_network = argv[a + 1];
         }
-        else if ( !strcmp(argv[a], "-lr") ) {
+        else if ( !strcmp(argv[a], "-lr") )
+        {
             params.learning_rate = atof(argv[a + 1]);
             if ( params.learning_rate == 0.0 ) {
                 usage(argv);
             }
         }
-        else if ( !strcmp(argv[a], "-mb") ) {
+        else if ( !strcmp(argv[a], "-mb") )
+        {
             params.mini_batch_size = atoi(argv[a + 1]);
             if ( params.mini_batch_size <= 0 ) {
                 usage(argv);
             }
         }
-        else if ( !strcmp(argv[a], "-it") ) {
+        else if ( !strcmp(argv[a], "-it") )
+        {
             params.iterations = (unsigned long) atol(argv[a + 1]);
             if ( params.iterations == 0 ) {
                 usage(argv);
             }
         }
-        else if ( !strcmp(argv[a], "-ep") ) {
+        else if ( !strcmp(argv[a], "-ep") )
+        {
             params.epochs = (unsigned long) atol(argv[a + 1]);
         }
-        else if ( !strcmp(argv[a], "-dl") ) {
+        else if ( !strcmp(argv[a], "-dl") )
+        {
             params.learning_rate_decrease = atof(argv[a + 1]);
             if ( params.learning_rate_decrease == 0 ) {
                 usage(argv);
             }
             params.decrease_lr = 1;
         }
-        else if ( !strcmp(argv[a], "-st") ) {
+        else if ( !strcmp(argv[a], "-st") )
+        {
             params.store_network_every = atoi(argv[a + 1]);
             if ( params.store_network_every == 0 ) {
                 store_after_training = 1;
@@ -149,28 +164,34 @@ void parse_input_args(int argc, char** argv)
             params.store_network_name_raw = save_model_folder_raw;
             params.store_network_name_json = save_model_folder_json;
         }
-        else if ( !strcmp(argv[a], "-out") ) {
+        else if ( !strcmp(argv[a], "-out") )
+        {
             write_output_directly_bytes = atoi(argv[a+1]);
             if ( write_output_directly_bytes <= 0 ) {
                 usage(argv);
             }
         }
-        else if ( !strcmp(argv[a], "-L") ) {
+        else if ( !strcmp(argv[a], "-L") )
+        {
             params.layers = (unsigned int) atoi(argv[a+1]);
             if ( params.layers > LSTM_MAX_LAYERS ) {
                 usage(argv);
             }
         }
-        else if ( !strcmp(argv[a], "-N") ) {
+        else if ( !strcmp(argv[a], "-N") )
+        {
             params.neurons = (unsigned int) atoi(argv[a+1]);
-            if ( params.layers > LSTM_MAX_LAYERS ) {
+            if ( params.layers > LSTM_MAX_LAYERS )
+            {
                 usage(argv);
             }
         }
-        else if ( !strcmp(argv[a], "-vr") ) {
+        else if ( !strcmp(argv[a], "-vr") )
+        {
             params.print_progress = !!atoi(argv[a+1]);
         }
-        else if ( !strcmp(argv[a], "-c") ) {
+        else if ( !strcmp(argv[a], "-c") )
+        {
             seed = argv[a+1];
         }
         a += 2;
@@ -241,7 +262,8 @@ int main(int argc, char *argv[])
     params.store_network_name_raw = STD_LOADABLE_NET_NAME;
     params.store_network_name_json = STD_JSON_NET_NAME;
     params.store_char_indx_map_name = JSON_KEY_NAME_SET;
-    params.use_tanf = 0;        // USE NEW FAST TANH
+    params.use_tanf = 0;        // if 1, USE NEW FAST TANH
+    params.true_der = 0;        // if 1 and TANH is used, the derivative ^(3/2)
     
     srand( (unsigned int)time ( NULL ) );
     
@@ -289,7 +311,6 @@ int main(int argc, char *argv[])
         int FReadNewAfterDataFile;
         
         initialize_set(&set);
-        
         lstm_load(read_network, &set, &params, &model_layers);
         
         if ( seed == NULL )

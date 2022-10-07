@@ -79,7 +79,7 @@ void tanh_backward(double* dldY, double* Y, double* dldX, int L);
 /** Y = tanf(X), dldY, Y, &dldX, length */
 void  tanf_forward(double* Y, double* X, int L);
 /** Y = tanhf(X), dldY, Y, &dldX, length */
-void  tanf_backward(double* dldY, double* Y, double* dldX, int L);
+void  tanf_backward(double* dldY, double* Y, double* dldX, int L, int td);
 
 
 /** The loss function used in the output layer of the LSTM network, which is a softmax layer

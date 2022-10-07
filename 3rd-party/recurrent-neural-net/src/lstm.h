@@ -105,7 +105,9 @@ typedef struct lstm_model_parameters_t
     double gradient_clip_limit;
     unsigned long iterations;
     unsigned long epochs;
-    int use_tanf;
+    
+    int use_tanf;           // use tanf()
+    int true_der;           // use true derivative of tanf()
 } lstm_model_parameters_t;
 
 typedef struct lstm_model_t
@@ -267,7 +269,7 @@ int lstm_reinit_model(
  */
 void lstm_store_net_layers_as_json(lstm_model_t** model, const char * filename,
                                    const char *set_name, set_t *set, unsigned int layers);
-void lstm_store_progress(const char*, unsigned int, double);
+void lstm_store_progress(const char*, unsigned int, double, const char *);
 
 /**
  * This is the entry point to the realm of black magic.
