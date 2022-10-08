@@ -3,7 +3,7 @@
 #include <string.h>
 #include <signal.h>
 
-#ifdef WINDOWS
+#ifdef _WIN32
 
 #else
 #include <unistd.h>
@@ -16,7 +16,7 @@
 
 #include "std_conf.h"
 
-#define ITERATIONS  100000000
+#define ITERATIONS  1000000
 #define NO_EPOCHS   0
 
 lstm_model_t *model = NULL, *layer1 = NULL, *layer2 = NULL;
@@ -42,9 +42,11 @@ void store_the_net_layers(int signo)
             lstm_store_net_layers_as_json(model_layers, params.store_network_name_json, JSON_KEY_NAME_SET, &set, params.layers);
             printf("\nStored the net as: '%s'\nYou can use that file in the .html interface.\n",
                    params.store_network_name_json );
-            printf("The net in its raw format is stored as: '%s'.\nYou can use that with the -r flag \
-to continue refining the weights.\n", params.store_network_name_raw);
-        } else {
+            printf("The net in its raw format is stored as: '%s'.\nYou can use that with the -r flag "
+                   "to continue refining the weights.\n", params.store_network_name_raw);
+        } 
+        else 
+        {
             printf("\nFailed to store the net!\n");
             exit(-1);
         }
@@ -72,10 +74,12 @@ void usage(char *argv[]) {
     printf("    -st : number of iterations between how the network is stored during training. If 0 only stored once after training.\r\n");
     printf("    -out: number of characters to output directly, note: a network and a datafile must be provided.\r\n");
     printf("    -L  : Number of layers, may not exceed %d\r\n", LSTM_MAX_LAYERS);
-    printf("    -N  : Number of neurons in every layer\r\n");
-    printf("    -vr : Verbosity level. Set to zero and only the loss function after and not during training will be printed.\n");
+    printf("    -N  : Number of neurons in every layer, may bot exceed %d\r\n", LSTM_MAX_NEURONS);
+    printf("    -vr : Verbosity level. Set to zero and only the loss function after and not during training will be printed.\r\n");
     printf("    -c  : Don't train, only generate output. Seed given by the value. If -r is used, datafile is not considered.\r\n");
     printf("    -s  : Save folder, where models are stored (binary and JSON).\r\n");
+    printf("    -tf : Use tanf() instead of tanh()\r\n");
+//    printf("    -td : When using tanf(), use simplified derivative in back propagation (drop power of 3/2)\r\n");
     printf("\r\n");
     printf("Check std_conf.h to see what default values are used, these are set during compilation.\r\n");
     printf("\r\n");
@@ -83,7 +87,19 @@ void usage(char *argv[]) {
     exit(1);
 }
 
-void parse_input_args(int argc, char** argv)
+static void create_stats_file(const char* filename)
+{
+    FILE* fp;
+
+    fp = fopen(filename, "w");
+    if (fp != NULL)
+    {
+        fprintf(fp, "Func,Iteration,Epoc,Loss,FWtime,BWtime\n");
+        fclose(fp);
+    }
+}
+
+static void parse_input_args(int argc, char** argv)
 {
     int a = 0;
     
@@ -181,7 +197,7 @@ void parse_input_args(int argc, char** argv)
         else if ( !strcmp(argv[a], "-N") )
         {
             params.neurons = (unsigned int) atoi(argv[a+1]);
-            if ( params.layers > LSTM_MAX_LAYERS )
+            if ( params.layers > LSTM_MAX_NEURONS )
             {
                 usage(argv);
             }
@@ -304,7 +320,13 @@ int main(int argc, char *argv[])
     while ( ( c = fgetc(fp) ) != EOF )
         X_train[sz++] = set_char_to_indx(&set,c);
     fclose(fp);
-    
+ 
+    if (params.store_progress_every_x_iterations > 0)
+    {
+        // create new progess file name
+        create_stats_file(params.store_progress_file_name);
+    }
+
     if ( read_network != NULL )
     {
         int FRead;
@@ -321,12 +343,14 @@ int main(int argc, char *argv[])
             // Read from datafile, see if new features appear
             
             fp = fopen(argv[1], "r");
-            if ( fp == NULL ) {
+            if ( fp == NULL ) 
+            {
                 printf("Could not open file: %s\n", argv[1]);
                 return -1;
             }
             
-            while ( ( c = fgetc(fp) ) != EOF ) {
+            while ( ( c = fgetc(fp) ) != EOF ) 
+            {
                 set_insert_symbol(&set, (char)c );
             }
             
@@ -334,13 +358,15 @@ int main(int argc, char *argv[])
             
             FReadNewAfterDataFile = set_get_features(&set);
             
-            if ( FReadNewAfterDataFile > FRead ) {
+            if ( FReadNewAfterDataFile > FRead ) 
+            {
                 // New features appeared. Must change
                 // first and last layer.
-                printf("New features detected in datafile.\nLoaded network worked with %d features\
-, now there is %d features in total.\n\
-Reallocating space in network input and output layer to accommodate this new feature set.\n",
-                       FRead, FReadNewAfterDataFile);
+                printf("New features detected in datafile.\nLoaded network worked with %d features, "
+                       "now there is %d features in total.\n"
+                       "Reallocating space in network input and output layer to accommodate this "
+                       "new feature set.\n",
+                        FRead, FReadNewAfterDataFile);
                 
                 lstm_reinit_model(
                                   model_layers,
@@ -401,8 +427,7 @@ Reallocating space in network input and output layer to accommodate this new fea
     }
     
     if ( write_output_directly_bytes && read_network != NULL )
-    {
-        
+    {        
         lstm_output_string_layers(model_layers, &set, set_indx_to_char(&set, 0), write_output_directly_bytes, params.layers);
         
         free(model_layers);
@@ -466,7 +491,6 @@ Reallocating space in network input and output layer to accommodate this new fea
     
     free(model_layers);
     free(X_train);
-    
     return 0;
 }
 

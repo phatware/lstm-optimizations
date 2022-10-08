@@ -117,6 +117,7 @@ void  vectors_multiply(double* A, double* B, int L)
         ++l;
     }
 }
+
 void  vectors_mutliply_scalar(double* A, double b, int L)
 {
     int l = 0;
@@ -152,7 +153,7 @@ int   init_random_matrix(double*** A, int R, int C)
     return 0;
 }
 
-double*   get_random_vector(int L, int R) {
+double* get_random_vector(int L, int R) {
     
     int l = 0;
     double *p;
@@ -167,7 +168,7 @@ double*   get_random_vector(int L, int R) {
     
 }
 
-double**  get_random_matrix(int R, int C)
+double** get_random_matrix(int R, int C)
 {
     int r = 0, c = 0;
     double ** p;

@@ -34,61 +34,51 @@
 
 #include "layers.h"
 
-#ifdef WINDOWS
+#ifdef _WIN32
 #include <stdio.h>
 #endif
 
 //    Y = AX + b        &Y,      A,       X,    B,     Rows (for A), Columns (for A)
 void  fully_connected_forward(double* Y, double* A, double* X, double* b, int R, int C)
 {
-    int i = 0, n = 0;
-    while ( i < R ) {
+    int i, n;
+    for (i = 0; i < R; i++)
+    {
         Y[i] = b[i];
         n = 0;
-        while ( n < C ) {
+        for (n = 0; n < C; n++) 
+        {
             Y[i] += A[i * C + n] * X[n];
-            ++n;
         }
-        ++i;
     }
-    
 }
 //    Y = AX + b        dldY,       A,     X,        &dldA,    &dldX,    &dldb   Rows (A), Columns (A)
 void  fully_connected_backward(double* dldY, double* A, double* X,double* dldA,
                                double* dldX, double* dldb, int R, int C)
 {
-    int i = 0, n = 0;
-    
-    // computing dldA
-    while ( i < R ) {
-        n = 0;
-        while ( n < C ) {
+    int i, n;
+    for (i = 0; i < R; i++)
+    {
+        for (n = 0; n < C; n++)
+        {
             dldA[i * C + n] = dldY[i] * X[n];
-            ++n;
         }
-        ++i;
     }
     
     // computing dldb (easy peasy)
-    i = 0;
-    while ( i < R ) {
+    for (i = 0; i < R; i++) 
+    {
         dldb[i] = dldY[i];
-        ++i;
     }
     
     // computing dldX
-    i = 0;
-    n = 0;
-    while ( i < C ) {
-        n = 0;
-        
+    for (i = 0; i < C; i++) 
+    {
         dldX[i] = 0.0;
-        while ( n < R ) {
+        for (n = 0; n < R; n++) 
+        {
             dldX[i] += A[n * C + i] * dldY[n];
-            ++n;
         }
-        
-        ++i;
     }
 }
 
@@ -103,7 +93,7 @@ void  softmax_layers_forward(double* P, double* Y, int F, double temperature)
 {
     int f = 0;
     double sum = 0;
-#ifdef WINDOWS
+#ifdef _WIN32
     // MSVC is not a C99 compiler, and does not support variable length arrays
     // MSVC is documented as conforming to C90
     double *cache = malloc(sizeof(double)*F);
@@ -117,19 +107,21 @@ void  softmax_layers_forward(double* P, double* Y, int F, double temperature)
     double cache[F];
 #endif
     
-    while ( f < F ) {
+    while ( f < F ) 
+    {
         cache[f] = exp(Y[f] / temperature);
         sum += cache[f];
         ++f;
     }
     
     f = 0;
-    while ( f < F ) {
+    while ( f < F ) 
+    {
         P[f] = cache[f] / sum;
         ++f;
     }
     
-#ifdef WINDOWS
+#ifdef _WIN32
     free(cache);
 #endif
 }
@@ -138,7 +130,8 @@ void  softmax_loss_layer_backward(double* P, int c, double* dldh, int R)
 {
     int r = 0;
     
-    while ( r < R ) {
+    while ( r < R ) 
+    {
         dldh[r] = P[r];
         ++r;
     }
@@ -152,7 +145,8 @@ void  sigmoid_forward(double* Y, double* X, int L)
 {
     int l = 0;
     
-    while ( l < L ) {
+    while ( l < L )
+    {
         Y[l] = 1.0 / ( 1.0 + exp(-X[l]));
         ++l;
     }
@@ -163,7 +157,8 @@ void  sigmoid_backward(double* dldY, double* Y, double* dldX, int L)
 {
     int l = 0;
     
-    while ( l < L ) {
+    while ( l < L ) 
+    {
         dldX[l] = ( 1.0 - Y[l] ) * Y[l] * dldY[l];
         ++l;
     }
@@ -201,6 +196,8 @@ void  tanf_forward(double* Y, double* X, int L)
         ++l;
     }
 }
+
+#if 0
 //    Y = tanhf(X), dldY, Y, &dldX, length
 void  tanf_backward(double* dldY, double* Y, double* dldX, int L, int td)
 {
@@ -214,6 +211,20 @@ void  tanf_backward(double* dldY, double* Y, double* dldX, int L, int td)
             dldX[l] = sqrt(t * t * t) * dldY[l];
         else
             dldX[l] = t * dldY[l];
+        ++l;
+    }
+}
+#endif // 0
+
+void  tanf_backward(double* dldY, double* Y, double* dldX, int L)
+{
+    int l = 0;
+    double t;
+    while (l < L)
+    {
+        // TODO: test derivative (overfitting faster than tanh()?)
+        t = (1.0 - Y[l] * Y[l]);
+        dldX[l] = sqrt(t * t * t) * dldY[l];
         ++l;
     }
 }

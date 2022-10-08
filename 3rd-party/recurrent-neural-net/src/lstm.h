@@ -40,7 +40,7 @@
 
 #include <stdlib.h>
 
-#ifdef WINDOWS
+#ifdef _WIN32
 
 #else
 #include <unistd.h>
@@ -54,10 +54,11 @@
 #include "layers.h"
 #include "assert.h"
 
-#define    OPTIMIZE_ADAM                         0
+#define OPTIMIZE_ADAM                         0
 #define OPTIMIZE_GRADIENT_DESCENT             1
 
 #define LSTM_MAX_LAYERS                       10
+#define LSTM_MAX_NEURONS                      300
 
 #define BINARY_FILE_VERSION                   1
 
@@ -269,7 +270,7 @@ int lstm_reinit_model(
  */
 void lstm_store_net_layers_as_json(lstm_model_t** model, const char * filename,
                                    const char *set_name, set_t *set, unsigned int layers);
-void lstm_store_progress(const char*, unsigned int, double, const char *);
+void lstm_store_progress(const char*, unsigned int, unsigned int, double, const char *);
 
 /**
  * This is the entry point to the realm of black magic.

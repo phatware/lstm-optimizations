@@ -20,6 +20,9 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
+#pragma once
+
 #include <stdlib.h>
 #include <math.h>
 
@@ -79,7 +82,8 @@ void tanh_backward(double* dldY, double* Y, double* dldX, int L);
 /** Y = tanf(X), dldY, Y, &dldX, length */
 void  tanf_forward(double* Y, double* X, int L);
 /** Y = tanhf(X), dldY, Y, &dldX, length */
-void  tanf_backward(double* dldY, double* Y, double* dldX, int L, int td);
+// void  tanf_backward(double* dldY, double* Y, double* dldX, int L, int td);
+void  tanf_backward(double* dldY, double* Y, double* dldX, int L);
 
 
 /** The loss function used in the output layer of the LSTM network, which is a softmax layer
