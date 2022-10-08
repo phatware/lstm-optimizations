@@ -1676,7 +1676,7 @@ void lstm_store_progress(const char* filename, unsigned int n, unsigned int epoc
     fp = fopen(filename, "a");
     if ( fp != NULL )
     {
-        fprintf(fp, "%s,%u,%lf,%lf,%lf\n", tnh, n, epoch, loss, total_fw_time, total_bw_time);
+        fprintf(fp, "%s,%u,%u,%lf,%lf,%lf\n", tnh, n, epoch, loss, total_fw_time, total_bw_time);
         fclose(fp);
     }
     
