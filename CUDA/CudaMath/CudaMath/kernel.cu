@@ -1,9 +1,9 @@
 ﻿
-#define _INC_MATH
+#define __CUDACC__
 
+#include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include "math_functions.h"
 
 #include <stdio.h>
 #include <chrono>
@@ -35,11 +35,55 @@ private:
     time_point<clock_> beg_;
 };
 
+__global__ void eqKernel(double* c, const double* a, const double* b)
+{
+    int i = threadIdx.x;
+    c[i] = a[i];
+}
 
-__global__ void addKernel(int *c, const int *a, const int *b)
+__global__ void addKernel(double *c, const double*a, const double *b)
 {
     int i = threadIdx.x;
     c[i] = a[i] + b[i];
+}
+
+__global__ void subKernel(double* c, const double* a, const double* b)
+{
+    int i = threadIdx.x;
+    c[i] = a[i] - b[i];
+}
+
+__global__ void milKernel(double* c, const double* a, const double* b)
+{
+    int i = threadIdx.x;
+    c[i] = a[i] * b[i];
+}
+
+__global__ void divKernel(double* c, const double* a, const double* b)
+{
+    int i = threadIdx.x;
+    c[i] = a[i] / b[i];
+}
+
+__global__ void tanfKernel(double* c, const double* a, const double* b)
+{
+    int i = threadIdx.x;
+    c[i] = a[i] / __dsqrt_rn(1.0 + a[i] * a[i]);
+}
+
+__global__ void tanf2Kernel(double* c, const double* a, const double* b)
+{
+    int i = threadIdx.x;
+    c[i] = __dmul_rn(a[i], a[i]);
+    c[i] = __dadd_rn(1.0, c[i]);
+    c[i] = __dsqrt_rn(c[i]);
+    c[i] = __ddiv_rn(a[i], c[i]);
+}
+
+__global__ void tanhKernel(double* c, const double* a, const double* b)
+{
+    int i = threadIdx.x;
+    c[i] = tanhf(a[i]);
 }
 
 inline double tanf(double x)
@@ -95,6 +139,7 @@ static map<const char*, double> _FUNCS{
     {"soft", 0},
     {"tanh", 0},
     {"tanf", 0},
+    {"tanf2", 0},
 };
 
 std::string getEnvVar(std::string const& key)
@@ -105,31 +150,68 @@ std::string getEnvVar(std::string const& key)
     return buff == NULL ? std::string("") : std::string(buff);
 }
 
+
 #define randf() ((double) rand()) / ((double) (RAND_MAX))
 #define FUNC_TEST(name, expr)                   \
     total = 0;                                  \
-    srand(42);                                  \
     tmr.reset();                                \
-    for (int64_t i = 0; i < 100000000; i++) {   \
-        r1 = randf();                           \
-        r2 = randf();                           \
-        total += expr;                          \
+    for (int64_t i = 0; i < 1000000; i++) {   \
+        a[0] = randf();                           \
+        a[1] = randf();                           \
+        a[2] = 0;       \
+cudaStatus = cudaMemcpy(r, a, 3 * sizeof(double), cudaMemcpyHostToDevice); \
+if (cudaStatus != cudaSuccess) \
+{ \
+    fprintf(stderr, "cudaMemcpy failed!"); \
+    return -1; \
+} \
+        expr<<<1, 1>>>(&r[2], &r[0], &r[1]); \
     }                                           \
+cudaStatus = cudaDeviceSynchronize(); \
+if (cudaStatus != cudaSuccess) { \
+    fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus); \
+     return -1; \
+} \
+cudaStatus = cudaMemcpy(a, r, 3 * sizeof(double), cudaMemcpyDeviceToHost); \
+if (cudaStatus != cudaSuccess) { \
+    fprintf(stderr, "cudaMemcpy failed!"); \
+    return -1; \
+} \
     double name = tmr.elapsed();                \
     _FUNCS[#name] += (name - baseline + 0.05);  \
     printf(#name);                              \
     printf(":\n%.7f", name - baseline + 0.05);  \
-    printf("   %.7f\n", total);
+    printf("   r1=%.5f r2=%.5f  t=%.5f\n", a[0], a[1], a[2]); \
+    fflush(stdout);
 
 
 int main()
 {
-    double total, r1, r2;
+    double total, a[3] = { 0 };
     Timer tmr;
 
+    cudaError_t cudaStatus;
 
-    FUNC_TEST(baseline, 1.0);
+    double* r = NULL;
 
+    srand(42);
+
+    // Choose which GPU to run on, change this on a multi-GPU system.
+    cudaStatus = cudaSetDevice(0);
+    if (cudaStatus != cudaSuccess) 
+    {
+        cerr << "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?" << endl;
+        return -1;
+    }
+
+    cudaStatus = cudaMalloc((void**)&r, 3 * sizeof(double));
+    if (cudaStatus != cudaSuccess)
+    {
+        fprintf(stderr, "cudaMalloc failed!");
+        return -1;
+    }
+
+    FUNC_TEST(baseline, eqKernel);
 
     for (int j = 0; j < 10; j++)
     {
@@ -137,20 +219,23 @@ int main()
         //   subtracts off the baseline time to give
         //   a better approximation of the cost
         //   for just the specified operation
-        FUNC_TEST(plus, r1 + r2)
-        FUNC_TEST(minus, r1 - r2)
-        FUNC_TEST(mult, r1 * r2)
-        FUNC_TEST(div, r1 / r2)
-        FUNC_TEST(sqrt, std::sqrt(r1))
-        FUNC_TEST(log, std::log(r1))
-        FUNC_TEST(exp, std::exp(r1))
-        FUNC_TEST(soft, soft(r1))
-        FUNC_TEST(leaky_relu, leaky_relu(r1, 0.001))
-        FUNC_TEST(relu, relu(r1))
-        FUNC_TEST(elu, elu(r1))
-        FUNC_TEST(sigmoid, sigmoid(r1))
-        FUNC_TEST(tanh, std::tanh(r1))
-        FUNC_TEST(tanf, tanf(r1))
+        FUNC_TEST(plus, addKernel)
+        FUNC_TEST(minus, subKernel)
+        FUNC_TEST(mult, milKernel)
+        FUNC_TEST(div, divKernel)
+        
+        // FUNC_TEST(sqrt, std::sqrt(r[0]))
+        //FUNC_TEST(log, std::log(r[0]))
+        //FUNC_TEST(exp, std::exp(r[0]))
+        //FUNC_TEST(soft, soft(r[0]))
+        //FUNC_TEST(leaky_relu, leaky_relu(r[0], 0.001))
+        //FUNC_TEST(relu, relu(r[0]))
+        //FUNC_TEST(elu, elu(r[0]))
+        //FUNC_TEST(sigmoid, sigmoid(r[0]))
+
+        FUNC_TEST(tanh, tanhKernel)
+        FUNC_TEST(tanf, tanfKernel)
+        FUNC_TEST(tanf2, tanf2Kernel)
     }
 
     std::ofstream fout;
@@ -189,113 +274,12 @@ int main()
     }
     fout.close();
 
-}
-
-#if 0
-    const int arraySize = 5;
-    const int a[arraySize] = { 1, 2, 3, 4, 5 };
-    const int b[arraySize] = { 10, 20, 30, 40, 50 };
-    int c[arraySize] = { 0 };
-
-    // Add vectors in parallel.
-    cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addWithCuda failed!");
-        return 1;
-    }
-
-    printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n",
-        c[0], c[1], c[2], c[3], c[4]);
-
-    // cudaDeviceReset must be called before exiting in order for profiling and
-    // tracing tools such as Nsight and Visual Profiler to show complete traces.
+    cudaFree(r);
     cudaStatus = cudaDeviceReset();
-    if (cudaStatus != cudaSuccess) {
+    if (cudaStatus != cudaSuccess) 
+    {
         fprintf(stderr, "cudaDeviceReset failed!");
-        return 1;
+        return -1;
     }
-
     return 0;
 }
-
-// Helper function for using CUDA to add vectors in parallel.
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
-{
-    int *dev_a = 0;
-    int *dev_b = 0;
-    int *dev_c = 0;
-    cudaError_t cudaStatus;
-
-    // Choose which GPU to run on, change this on a multi-GPU system.
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-        goto Error;
-    }
-
-    // Allocate GPU buffers for three vectors (two input, one output)    .
-    cudaStatus = cudaMalloc((void**)&dev_c, size * sizeof(int));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
-
-    cudaStatus = cudaMalloc((void**)&dev_a, size * sizeof(int));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
-
-    cudaStatus = cudaMalloc((void**)&dev_b, size * sizeof(int));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
-
-    // Copy input vectors from host memory to GPU buffers.
-    cudaStatus = cudaMemcpy(dev_a, a, size * sizeof(int), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
-
-    cudaStatus = cudaMemcpy(dev_b, b, size * sizeof(int), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
-
-    // Launch a kernel on the GPU with one thread for each element.
-    addKernel<<<1, size>>>(dev_c, dev_a, dev_b);
-
-    // Check for any errors launching the kernel
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-        goto Error;
-    }
-    
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-    // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        goto Error;
-    }
-
-    // Copy output vector from GPU buffer to host memory.
-    cudaStatus = cudaMemcpy(c, dev_c, size * sizeof(int), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cu0daMemcpy failed!");
-        goto Error;
-    }
-
-Error:
-    cudaFree(dev_c);
-    cudaFree(dev_a);
-    cudaFree(dev_b);
-    
-    return cudaStatus;
-}
-
-#endif // 0
