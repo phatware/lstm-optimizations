@@ -502,8 +502,8 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
 }
 
 // A = A - alpha * m, m = momentum * m + ( 1 - momentum ) * dldA
-void gradients_decend(lstm_model_t* model, lstm_model_t* gradients) {
-    
+void gradients_decend(lstm_model_t* model, lstm_model_t* gradients)
+{
     // Computing momumentum * m
     vectors_mutliply_scalar(gradients->Wym, model->params->momentum, model->Y * model->N);
     vectors_mutliply_scalar(gradients->Wim, model->params->momentum, model->N * model->S);
@@ -1735,7 +1735,8 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
 #ifdef _WIN32
     double *first_layer_input = malloc(model_layers[0]->Y*sizeof(double));
     
-    if ( first_layer_input == NULL ) {
+    if ( first_layer_input == NULL )
+    {
         fprintf(stderr, "%s.%s.%d malloc(%zu) failed\r\n",
                 __FILE__, __func__, __LINE__, model_layers[0]->Y*sizeof(double));
         exit(1);
@@ -1744,11 +1745,13 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
     double first_layer_input[model_layers[0]->Y];
 #endif
     
-    if ( stateful ) {
+    if ( stateful )
+    {
         stateful_d_next = e_calloc(layers, sizeof(lstm_values_state_t*));
         
         i = 0;
-        while ( i < layers ) {
+        while ( i < layers )
+        {
             stateful_d_next[i] = e_calloc( training_points/params->mini_batch_size + 1, sizeof(lstm_values_state_t));
             
             lstm_values_state_init(&stateful_d_next[i], model_layers[i]->N);
@@ -1765,7 +1768,8 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                                    sizeof(lstm_values_cache_t*));
         
         p = 0;
-        while ( p < params->mini_batch_size + 1 ) {
+        while ( p < params->mini_batch_size + 1 )
+        {
             cache_layers[i][p] = lstm_cache_container_init(
                                                            model_layers[i]->X, model_layers[i]->N, model_layers[i]->Y);
             if ( cache_layers[i][p] == NULL )

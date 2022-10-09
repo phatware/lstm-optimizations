@@ -33,6 +33,7 @@
  *
  */
 #include "utilities.h"
+#include <memory.h>
 
 // used on contigous vectors
 void  vectors_add(double* A, double* B, int L)
@@ -196,55 +197,40 @@ double** get_random_matrix(int R, int C)
 
 double**  get_zero_matrix(int R, int C)
 {
-    int r = 0, c = 0;
+    int r = 0;
     double ** p;
     p = e_calloc(R, sizeof(double*));
     
-    while ( r < R ) {
+    while ( r < R )
+    {
         p[r] = e_calloc(C, sizeof(double));
-        
         ++r;
     }
-    
     r = 0;
-    c = 0;
-    
-    while ( r < R ) {
-        c = 0;
-        while ( c < C ) {
-            p[r][c] =  0.0;
-            ++c;
-        }
+    while ( r < R )
+    {
+        memset(p[r], 0, C*sizeof(double));
         ++r;
     }
-    
     return p;
 }
 
 int   init_zero_matrix(double*** A, int R, int C)
 {
-    int r = 0, c = 0;
-    
+    int r = 0;
     *A = e_calloc(R, sizeof(double*));
-    
-    while ( r < R ) {
+    while ( r < R )
+    {
         (*A)[r] = e_calloc(C, sizeof(double));
-        
         ++r;
     }
     
     r = 0;
-    c = 0;
-    
-    while ( r < R ) {
-        c = 0;
-        while ( c < C ) {
-            (*A)[r][c] = 0.0;
-            ++c;
-        }
+    while ( r < R )
+    {
+        memset((*A)[r], 0, C*sizeof(double));
         ++r;
     }
-    
     return 0;
 }
 
@@ -261,28 +247,15 @@ int   free_matrix(double** A, int R)
 
 int   init_zero_vector(double** V, int L)
 {
-    int l = 0;
     *V = e_calloc(L, sizeof(double));
-    
-    while ( l < L ) {
-        (*V)[l] = 0.0;
-        ++l;
-    }
-    
+    memset(*V, 0, L*sizeof(double));
     return 0;
 }
 
 double*   get_zero_vector(int L)
 {
-    int l = 0;
-    double *p;
-    p = e_calloc(L, sizeof(double));
-    
-    while ( l < L ) {
-        p[l] = 0.0;
-        ++l;
-    }
-    
+    double *p = e_calloc(L, sizeof(double));
+    memset(p, 0, L*sizeof(double));
     return p;
 }
 
@@ -319,22 +292,16 @@ void  matrix_add(double** A, double** B, int R, int C)
 
 void  vector_set_to_zero(double* V, int L )
 {
-    int l = 0;
-    while ( l < L )
-        V[l++] = 0.0;
+    memset(V, 0, L*sizeof(double));
 }
-
 
 void  matrix_set_to_zero(double** A, int R, int C)
 {
-    int r = 0, c = 0;
+    int r = 0;
     
-    while ( r < R ) {
-        c = 0;
-        while ( c < C ) {
-            A[r][c] = 0.0;
-            ++c;
-        }
+    while ( r < R )
+    {
+        memset(A[r], 0, C*sizeof(double));
         ++r;
     }
 }
@@ -400,8 +367,10 @@ int   vectors_fit(double* V, double limit, int L)
     int l = 0;
     int msg = 0;
     double norm = 0.0;
-    while ( l < L ) {
-        if ( V[l] > limit || V[l] < -limit ) {
+    while ( l < L )
+    {
+        if ( V[l] > limit || V[l] < -limit )
+        {
             msg = 1;
             norm = one_norm(V, L);
             break;
@@ -623,8 +592,7 @@ void  vector_store_json(double* V, int L, FILE * fp)
 /*
  * Gaussian generator: https://phoxis.org/2013/05/04/generating-random-numbers-from-normal-distribution-in-c/
  */
-double
-randn (double mu, double sigma)
+double randn (double mu, double sigma)
 {
     double U1, U2, W, mult;
     static double X1, X2;
@@ -651,7 +619,8 @@ randn (double mu, double sigma)
     return (mu + sigma * (double) X1);
 }
 
-double sample_normal() {
+double sample_normal()
+{
     double u = ((double) rand() / (RAND_MAX)) * 2 - 1;
     double v = ((double) rand() / (RAND_MAX)) * 2 - 1;
     double r = u * u + v * v;

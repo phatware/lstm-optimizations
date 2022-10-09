@@ -97,8 +97,8 @@ void  softmax_layers_forward(double* P, double* Y, int F, double temperature)
     // MSVC is not a C99 compiler, and does not support variable length arrays
     // MSVC is documented as conforming to C90
     double *cache = malloc(sizeof(double)*F);
-    
-    if ( cache == NULL ) {
+    if ( cache == NULL )
+    {
         fprintf(stderr, "%s.%s.%d malloc(%zu) failed\r\n",
                 __FILE__, __func__, __LINE__, sizeof(double)*F);
         exit(1);
@@ -181,7 +181,7 @@ void  tanh_backward(double* dldY, double* Y, double* dldX, int L)
     int l = 0;
     while ( l < L )
     {
-        dldX[l] = ( 1.0 - Y[l] * Y[l] ) * dldY[l];
+        dldX[l] = (1.0 - Y[l] * Y[l]) * dldY[l];
         ++l;
     }
 }
@@ -192,7 +192,7 @@ void  tanf_forward(double* Y, double* X, int L)
     int l = 0;
     while ( l < L )
     {
-        Y[l] = X[l]/sqrt(1.0 + X[l]*X[l]);
+        Y[l] = X[l]/sqrt(1.0 + X[l] * X[l]);
         ++l;
     }
 }

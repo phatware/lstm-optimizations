@@ -46,6 +46,7 @@ void 	vectors_div(double*, double*, int);
 void 	vector_sqrt(double*, int);
 void 	vector_store_json(double*, int, FILE *);
 void 	vector_store_as_matrix_json(double*, int, int, FILE *);
+
 //		A = A + B		A,		B,    R, C
 void 	matrix_add(double**, double**, int, int);
 void 	matrix_substract(double**, double**, int, int);
@@ -62,11 +63,13 @@ int 	init_random_matrix(double***, int, int);
 int 	init_zero_matrix(double***, int, int);
 int 	free_matrix(double**, int);
 //						 V to be set, Length
+
 int 	init_zero_vector(double**, int);
 int 	free_vector(double**);
 //		A = B       A,		B,		length
 void 	copy_vector(double*, double*, int);
-double* 	get_zero_vector(int); 
+
+double* 	get_zero_vector(int);
 double** 	get_zero_matrix(int, int);
 double** 	get_random_matrix(int, int);
 double* 	get_random_vector(int,int);
@@ -97,4 +100,3 @@ void*   e_calloc(size_t count, size_t size);
 size_t  e_alloc_total(void);
 
 #endif
-
