@@ -235,7 +235,7 @@ static char * prettyPrintBytes(size_t bytes)
     return buffer;
 }
 
-int main(int argc, char *argv[])
+int rnn_main(int argc, char *argv[])
 {
     int c;
     unsigned int p = 0;
@@ -494,3 +494,9 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+#ifndef _BUILD_FOR_CUDA
+int main(int argc, char* argv[])
+{
+    return rnn_main(argc, argv);
+}
+#endif // _BUILD_FOR_CUDA

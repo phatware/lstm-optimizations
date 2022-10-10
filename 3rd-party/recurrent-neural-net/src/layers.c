@@ -38,6 +38,13 @@
 #include <stdio.h>
 #endif
 
+#ifdef _BUILD_FOR_CUDA
+#include "cuda_utils.cuh"
+
+#define SHORT_VECTOR    100
+
+#endif // _BUILD_FOR_CUDA
+
 //    Y = AX + b        &Y,      A,       X,    B,     Rows (for A), Columns (for A)
 void  fully_connected_forward(double* Y, double* A, double* X, double* b, int R, int C)
 {
@@ -143,38 +150,62 @@ void  softmax_loss_layer_backward(double* P, int c, double* dldh, int R)
 //    Y = sigmoid(X), &Y, X, length
 void  sigmoid_forward(double* Y, double* X, int L)
 {
-    int l = 0;
-    
-    while ( l < L )
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
     {
-        Y[l] = 1.0 / ( 1.0 + exp(-X[l]));
-        ++l;
+        cuda_forward_vectors_math_op(Y, X, L, vector_forward_sigmoid);
     }
-    
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L)
+        {
+            Y[l] = 1.0 / (1.0 + exp(-X[l]));
+            ++l;
+        }
+    }
 }
 //    Y = sigmoid(X), dldY, Y, &dldX, length
 void  sigmoid_backward(double* dldY, double* Y, double* dldX, int L)
 {
-    int l = 0;
-    
-    while ( l < L ) 
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
     {
-        dldX[l] = ( 1.0 - Y[l] ) * Y[l] * dldY[l];
-        ++l;
+        cuda_backward_vectors_math_op(dldY, Y, dldX, L, vector_backward_sigmoid);
     }
-    
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L)
+        {
+            dldX[l] = (1.0 - Y[l]) * Y[l] * dldY[l];
+            ++l;
+        }
+    }
 }
 
 //    Y = tanh(X), &Y, X, length
 void  tanh_forward(double* Y, double* X, int L)
 {
-    int l = 0;
-    while ( l < L )
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
     {
-        Y[l] = tanh(X[l]);
-        ++l;
+        cuda_forward_vectors_math_op(Y, X, L, vector_forward_tanh);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L)
+        {
+            Y[l] = tanh(X[l]);
+            ++l;
+        }
     }
 }
+
 //    Y = tanh(X), dldY, Y, &dldX, length
 void  tanh_backward(double* dldY, double* Y, double* dldX, int L)
 {

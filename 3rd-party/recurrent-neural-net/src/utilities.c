@@ -35,96 +35,194 @@
 #include "utilities.h"
 #include <memory.h>
 
+#ifdef _BUILD_FOR_CUDA
+#include "cuda_utils.cuh"
+
+#define SHORT_VECTOR    500
+
+#endif // _BUILD_FOR_CUDA
+
+
 // used on contigous vectors
 void  vectors_add(double* A, double* B, int L)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] += B[l];
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, B, L, 0, vector_math_add);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] += B[l];
+            ++l;
+        }
     }
 }
 
 void  vectors_add_scalar(double* A, double B, int L)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] += B;
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, NULL, L, B, vector_math_scalar_add);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] += B;
+            ++l;
+        }
     }
 }
 
 void  vectors_scalar_multiply(double* A, double d, int L)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] *= d;
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, NULL, L, d, vector_math_scalar_multiply);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] *= d;
+            ++l;
+        }
     }
 }
 
 // A = A + (B * s)
 void  vectors_add_scalar_multiply(double* A, double* B, int L, double s)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] += B[l] * s;
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, B, L, s, vector_math_add_scalar_multiply);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] += B[l] * s;
+            ++l;
+        }
     }
 }
 
 void  vectors_substract(double* A, double* B, int L)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] -= B[l];
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, B, L, 0, vector_math_substract);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] -= B[l];
+            ++l;
+        }
     }
 }
 
 void  vectors_div(double* A, double* B, int L)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] /= B[l];
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, B, L, 0, vector_math_divide);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] /= B[l];
+            ++l;
+        }
     }
 }
 
 void  vector_sqrt(double* A, int L)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] = sqrt(A[l]);
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, NULL, L, 0, vector_math_sqrt);
+    }
+    else
+#endif
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] = sqrt(A[l]);
+            ++l;
+        }
     }
 }
+
 // A = A - (B * s)
 void  vectors_substract_scalar_multiply(double* A, double* B, int L, double s)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] -= B[l] * s;
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, B, L, s, vector_math_substact_scalar_multiply);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] -= B[l] * s;
+            ++l;
+        }
     }
 }
 
-
 void  vectors_multiply(double* A, double* B, int L)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] *= B[l];
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, B, L, 0, vector_math_multiply);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] *= B[l];
+            ++l;
+        }
     }
 }
 
 void  vectors_mutliply_scalar(double* A, double b, int L)
 {
-    int l = 0;
-    while ( l < L ) {
-        A[l] *= b;
-        ++l;
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        cuda_inplace_vectors_math_op(A, NULL, L, b, vector_math_scalar_multiply);
+    }
+    else
+#endif // _BUILD_FOR_CUDA
+    {
+        int l = 0;
+        while (l < L) {
+            A[l] *= b;
+            ++l;
+        }
     }
 }
 
