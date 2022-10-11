@@ -40,6 +40,8 @@ typedef float numeric_t;
 typedef double numeric_t;
 #endif // _SINGLE_PRECISION
 
+#define _randf ((numeric_t) ((double)rand() / (double)RAND_MAX))
+
 // used on contigous vectors
 //		A = A + B		A,		B,    l
 void 	vectors_add(numeric_t*, numeric_t*, int);

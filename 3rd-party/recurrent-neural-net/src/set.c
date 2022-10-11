@@ -70,7 +70,7 @@ int set_char_to_indx(set_t* set, char c)
 int set_probability_choice(set_t* set, numeric_t* probs)
 {
     numeric_t sum = 0, random_value;
-    random_value = ((numeric_t) rand())/RAND_MAX;
+    random_value = _randf;
     
     for (int i = 0; i < SET_MAX_CHARS; i++)
     {
@@ -96,9 +96,9 @@ void set_print(set_t* set, numeric_t* probs)
     for (int i = 0; set->values[i] != 0 && i < SET_MAX_CHARS; i++)
     {
         if ( set->values[i] == '\n')
-            printf("[ newline:  %lf ]\n", probs[i]);
+            printf("[ newline:  %f ]\n", probs[i]);
         else
-            printf("[ %c:     %lf ]\n", set->values[i], probs[i]);
+            printf("[ %c:     %f ]\n", set->values[i], probs[i]);
     }
 }
 

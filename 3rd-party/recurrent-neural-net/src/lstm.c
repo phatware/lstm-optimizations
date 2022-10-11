@@ -28,8 +28,8 @@
 #include <stdio.h>
 #endif // 
 
-numeric_t total_fw_time = 0;
-numeric_t total_bw_time = 0;
+double total_fw_time = 0;
+double total_bw_time = 0;
 
 void lstm_init_fail(const char * msg)
 {
@@ -259,7 +259,7 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     
     if ( !(beta2t == beta2t) )
     {
-        printf("beta2t: %lf\n", beta2t);
+        printf("beta2t: %f\n", beta2t);
         exit(0);
     }
     
@@ -678,7 +678,7 @@ void lstm_forward_propagate(lstm_model_t* model, numeric_t *input,
     prg_begin = clock();
     lstm_forward_propagate_internal(model, input, cache_in, cache_out, softmax);
     prg_end = clock();
-    total_fw_time += (numeric_t)(prg_end - prg_begin) / (numeric_t)CLOCKS_PER_SEC;
+    total_fw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
 }
 
 //                            model, y_probabilities, y_correct, the next deltas, state and cache values, &gradients, &the next deltas
@@ -779,7 +779,7 @@ void lstm_backward_propagate(lstm_model_t* model, numeric_t* y_probabilities, in
     lstm_backward_propagate_internal(model, y_probabilities,
                                      y_correct, d_next, cache_in, gradients, cache_out);
     prg_end = clock();
-    total_bw_time += (numeric_t)(prg_end - prg_begin) / (numeric_t)CLOCKS_PER_SEC;
+    total_bw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
 }
 
 
@@ -1676,7 +1676,7 @@ void lstm_store_progress(const char* filename, unsigned int n, unsigned int epoc
     fp = fopen(filename, "a");
     if ( fp != NULL )
     {
-        fprintf(fp, "%s,%u,%u,%lf,%lf,%lf\n", tnh, n, epoch, loss, total_fw_time, total_bw_time);
+        fprintf(fp, "%s,%u,%u,%f,%lf,%lf\n", tnh, n, epoch, loss, total_fw_time, total_bw_time);
         fclose(fp);
     }
     
@@ -2042,7 +2042,7 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
             time(&time_iter);
             strftime(time_buffer, sizeof time_buffer, "%X", localtime(&time_iter));
             
-            printf("%s Iteration: %u (epoch: %u), Loss: %lf, record: %lf (iteration: %d), LR: %lf\n",
+            printf("%s Iteration: %u (epoch: %u), Loss: %f, record: %f (iteration: %d), LR: %f\n",
                    time_buffer, n, epoch, loss, record_keeper, record_iteration, params->learning_rate);
             printf("Using %s: Total backward time: %.3f  Total forward time: %.3f\n",
                    params->use_tanf != 0 ? "TANF" : "TANH", total_bw_time, total_fw_time);
@@ -2102,7 +2102,7 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         if ( decrease_lr ) 
         {
             params->learning_rate = initial_learning_rate / ( 1.0 + n / params->learning_rate_decrease );
-            //printf("learning rate: %lf\n", model->params->learning_rate);
+            //printf("learning rate: %f\n", model->params->learning_rate);
         }        
         ++n;
     }

@@ -262,7 +262,7 @@ numeric_t** get_random_matrix(int R, int C)
     while ( r < R ) {
         c = 0;
         while ( c < C ) {
-            p[r][c] =  ((( (numeric_t) rand() ) / RAND_MAX) ) / sqrt( R / 2.0 );
+            p[r][c] =  _randf / sqrt( R / 2.0 );
             ++c;
         }
         ++r;
@@ -585,9 +585,10 @@ void  vector_store_ascii(numeric_t* V, int L, FILE * fp)
 void  vector_read_ascii(numeric_t * V, int L, FILE * fp)
 {
     int l = 0;
+    const char * FORMAT = (sizeof(numeric_t) == sizeof(float)) ? "%f" : "%lf";
     
     while ( l < L ) {
-        if ( fscanf(fp, "%lf", &V[l]) <= 0 ) {
+        if ( fscanf(fp, FORMAT, &V[l]) <= 0 ) {
             fprintf(stderr, "%s.%s Failed to read file\r\n",
                     __FILE__, __func__);
             exit(1);
@@ -681,8 +682,8 @@ numeric_t randn (numeric_t mu, numeric_t sigma)
     }
     
     do {
-        U1 = -1 + ((numeric_t) rand () / RAND_MAX) * 2;
-        U2 = -1 + ((numeric_t) rand () / RAND_MAX) * 2;
+        U1 = -1 + _randf * 2;
+        U2 = -1 + _randf * 2;
         W = pow (U1, 2) + pow (U2, 2);
     } while ( W >= 1 || W == 0 );
     
@@ -697,8 +698,8 @@ numeric_t randn (numeric_t mu, numeric_t sigma)
 
 numeric_t sample_normal()
 {
-    numeric_t u = ((numeric_t) rand() / (RAND_MAX)) * 2 - 1;
-    numeric_t v = ((numeric_t) rand() / (RAND_MAX)) * 2 - 1;
+    numeric_t u = _randf * 2 - 1;
+    numeric_t v = _randf * 2 - 1;
     numeric_t r = u * u + v * v;
     if (r == 0 || r > 1)
         return sample_normal();

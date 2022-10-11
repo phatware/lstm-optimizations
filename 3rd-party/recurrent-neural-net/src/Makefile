@@ -30,4 +30,6 @@ net: $(OBJS)
 
 clean:
 	rm -f $(OBJS)
-
+	rm net
+	rm ../net
+	

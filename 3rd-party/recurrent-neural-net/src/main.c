@@ -468,7 +468,7 @@ int rnn_main(int argc, char *argv[])
         }
         printf("], Features: %d.\n", model_layers[params.layers-1]->X);
         printf("Allocated bytes for the network: %s\n", prettyPrintBytes(e_alloc_total()));
-        printf("Training parameters: Backprop Through Time: %d, LR: %lf, Mo: %lf, LA: %lf, LR-decrease: %lf.\n",
+        printf("Training parameters: Backprop Through Time: %d, LR: %f, Mo: %f, LA: %f, LR-decrease: %f.\n",
                MINI_BATCH_SIZE, params.learning_rate, params.momentum, params.lambda, params.learning_rate_decrease);
         
         signal(SIGINT, store_the_net_layers);
@@ -492,7 +492,7 @@ int rnn_main(int argc, char *argv[])
                                           JSON_KEY_NAME_SET, &set, params.layers);
         }
         
-        printf("Loss after training: %lf\n", loss);
+        printf("Loss after training: %f\n", loss);
     }
     
     free(model_layers);
