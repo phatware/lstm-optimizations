@@ -46,7 +46,7 @@
 #endif // _BUILD_FOR_CUDA
 
 //    Y = AX + b        &Y,      A,       X,    B,     Rows (for A), Columns (for A)
-void  fully_connected_forward(double* Y, const double* A, const double* X, const double* b, int R, int C)
+void  fully_connected_forward(numeric_t* Y, const numeric_t* A, const numeric_t* X, const numeric_t* b, int R, int C)
 {
     int i, n;
     for (i = 0; i < R; i++)
@@ -60,8 +60,8 @@ void  fully_connected_forward(double* Y, const double* A, const double* X, const
     }
 }
 //    Y = AX + b        dldY,       A,     X,        &dldA,    &dldX,    &dldb   Rows (A), Columns (A)
-void fully_connected_backward(const double* dldY, const double* A, const double* X,
-    double* dldA, double* dldX, double* dldb, int R, int C)
+void fully_connected_backward(const numeric_t* dldY, const numeric_t* A, const numeric_t* X,
+    numeric_t* dldA, numeric_t* dldX, numeric_t* dldb, int R, int C)
 {
     int i, n;
     for (i = 0; i < R; i++)
@@ -89,29 +89,29 @@ void fully_connected_backward(const double* dldY, const double* A, const double*
     }
 }
 
-double cross_entropy(const double* probabilities, int correct)
+numeric_t cross_entropy(const numeric_t* probabilities, int correct)
 {
     return -log(probabilities[correct]);
 }
 
 // Dealing with softmax layer, forward and backward
 //                &P,   Y,    features
-void  softmax_layers_forward(double* P, const double* Y, int F, double temperature)
+void  softmax_layers_forward(numeric_t* P, const numeric_t* Y, int F, numeric_t temperature)
 {
     int f = 0;
-    double sum = 0;
+    numeric_t sum = 0;
 #ifdef _WIN32
     // MSVC is not a C99 compiler, and does not support variable length arrays
     // MSVC is documented as conforming to C90
-    double *cache = malloc(sizeof(double)*F);
+    numeric_t *cache = malloc(sizeof(numeric_t)*F);
     if ( cache == NULL )
     {
         fprintf(stderr, "%s.%s.%d malloc(%zu) failed\r\n",
-                __FILE__, __func__, __LINE__, sizeof(double)*F);
+                __FILE__, __func__, __LINE__, sizeof(numeric_t)*F);
         exit(1);
     }
 #else
-    double cache[F];
+    numeric_t cache[F];
 #endif
     
     while ( f < F ) 
@@ -133,7 +133,7 @@ void  softmax_layers_forward(double* P, const double* Y, int F, double temperatu
 #endif
 }
 //                    P,    c,  &dldh, rows
-void  softmax_loss_layer_backward(const double* P, int c, double* dldh, int R)
+void  softmax_loss_layer_backward(const numeric_t* P, int c, numeric_t* dldh, int R)
 {
     int r = 0;
     
@@ -148,7 +148,7 @@ void  softmax_loss_layer_backward(const double* P, int c, double* dldh, int R)
 // Other layers used: sigmoid and tanh
 //
 //    Y = sigmoid(X), &Y, X, length
-void  sigmoid_forward(double* Y, const double* X, int L)
+void  sigmoid_forward(numeric_t* Y, const numeric_t* X, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
@@ -165,7 +165,7 @@ void  sigmoid_forward(double* Y, const double* X, int L)
     }
 }
 //    Y = sigmoid(X), dldY, Y, &dldX, length
-void  sigmoid_backward(const double* dldY, const double* Y, double* dldX, int L)
+void  sigmoid_backward(const numeric_t* dldY, const numeric_t* Y, numeric_t* dldX, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
@@ -183,7 +183,7 @@ void  sigmoid_backward(const double* dldY, const double* Y, double* dldX, int L)
 }
 
 //    Y = tanh(X), &Y, X, length
-void  tanh_forward(double* Y, const double* X, int L)
+void  tanh_forward(numeric_t* Y, const numeric_t* X, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
@@ -201,7 +201,7 @@ void  tanh_forward(double* Y, const double* X, int L)
 }
 
 //    Y = tanh(X), dldY, Y, &dldX, length
-void  tanh_backward(const double* dldY, const double* Y, double* dldX, int L)
+void  tanh_backward(const numeric_t* dldY, const numeric_t* Y, numeric_t* dldX, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
@@ -219,7 +219,7 @@ void  tanh_backward(const double* dldY, const double* Y, double* dldX, int L)
 }
 
 //    Y = tanf(X), &Y, X, length
-void  tanf_forward(double* Y, const double* X, int L)
+void  tanf_forward(numeric_t* Y, const numeric_t* X, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
@@ -238,10 +238,10 @@ void  tanf_forward(double* Y, const double* X, int L)
 
 #if 0
 //    Y = tanhf(X), dldY, Y, &dldX, length
-void  tanf_backward(double* dldY, double* Y, double* dldX, int L, int td)
+void  tanf_backward(numeric_t* dldY, numeric_t* Y, numeric_t* dldX, int L, int td)
 {
     int l = 0;
-    double t;
+    numeric_t t;
     while ( l < L )
     {
         // TODO: test derivative (overfitting faster than tanh()?)
@@ -255,7 +255,7 @@ void  tanf_backward(double* dldY, double* Y, double* dldX, int L, int td)
 }
 #endif // 0
 
-void  tanf_backward(const double* dldY, const double* Y, double* dldX, int L)
+void  tanf_backward(const numeric_t* dldY, const numeric_t* Y, numeric_t* dldX, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
@@ -265,7 +265,7 @@ void  tanf_backward(const double* dldY, const double* Y, double* dldX, int L)
     }
 #endif // _BUILD_FOR_CUDA
     int l = 0;
-    double t;
+    numeric_t t;
     while (l < L)
     {
         // TODO: test derivative (overfitting faster than tanh()?)

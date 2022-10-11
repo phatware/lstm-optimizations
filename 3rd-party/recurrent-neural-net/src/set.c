@@ -20,6 +20,7 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #include "set.h"
 
 void initialize_set(set_t * set)
@@ -66,10 +67,10 @@ int set_char_to_indx(set_t* set, char c)
     return -1;
 }
 
-int set_probability_choice(set_t* set, double* probs)
+int set_probability_choice(set_t* set, numeric_t* probs)
 {
-    double sum = 0, random_value;
-    random_value = ((double) rand())/RAND_MAX;
+    numeric_t sum = 0, random_value;
+    random_value = ((numeric_t) rand())/RAND_MAX;
     
     for (int i = 0; i < SET_MAX_CHARS; i++)
     {
@@ -90,7 +91,7 @@ int set_get_features(set_t* set)
     return 0;
 }
 
-void set_print(set_t* set, double* probs)
+void set_print(set_t* set, numeric_t* probs)
 {
     for (int i = 0; set->values[i] != 0 && i < SET_MAX_CHARS; i++)
     {
@@ -101,10 +102,10 @@ void set_print(set_t* set, double* probs)
     }
 }
 
-int set_greedy_argmax(set_t* set, double* probs)
+int set_greedy_argmax(set_t* set, numeric_t* probs)
 {
     int max_i = 0;
-    double max_double = 0.0;
+    numeric_t max_double = 0.0;
     for (int i = 0; set->values[i] != 0 && i < SET_MAX_CHARS; i++)
     {
         if ( probs[i] > max_double )

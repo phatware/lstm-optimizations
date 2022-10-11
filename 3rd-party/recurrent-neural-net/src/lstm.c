@@ -28,8 +28,8 @@
 #include <stdio.h>
 #endif // 
 
-double total_fw_time = 0;
-double total_bw_time = 0;
+numeric_t total_fw_time = 0;
+numeric_t total_bw_time = 0;
 
 void lstm_init_fail(const char * msg)
 {
@@ -194,7 +194,7 @@ void lstm_values_state_init(lstm_values_state_t** d_next_to_set, int N)
     *d_next_to_set = d_next;
 }
 
-int gradients_fit(lstm_model_t* gradients, double limit)
+int gradients_fit(lstm_model_t* gradients, numeric_t limit)
 {
     int msg = 0;
     msg += vectors_fit(gradients->Wy, limit, gradients->Y * gradients->N);
@@ -212,7 +212,7 @@ int gradients_fit(lstm_model_t* gradients, double limit)
     return msg;
 }
 
-int gradients_clip(lstm_model_t* gradients, double limit)
+int gradients_clip(lstm_model_t* gradients, numeric_t limit)
 {
     int msg = 0;
     msg += vectors_clip(gradients->Wy, limit, gradients->Y * gradients->N);
@@ -251,11 +251,11 @@ void sum_gradients(lstm_model_t* gradients, lstm_model_t* gradients_entry)
 
 void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm_model_t* M, lstm_model_t* R, unsigned int t)
 {
-    double beta1 = model->params->beta1;
-    double beta2 = model->params->beta2;
+    numeric_t beta1 = model->params->beta1;
+    numeric_t beta2 = model->params->beta2;
     
-    double beta1t = 1.0 / ( 1.0 - pow(beta1, t+1));
-    double beta2t = 1.0 / ( 1.0 - pow(beta2, t+1));
+    numeric_t beta1t = 1.0 / ( 1.0 - pow(beta1, t+1));
+    numeric_t beta2t = 1.0 / ( 1.0 - pow(beta2, t+1));
     
     if ( !(beta2t == beta2t) )
     {
@@ -568,12 +568,12 @@ void lstm_values_next_state_free(lstm_values_state_t* d_next)
     free(d_next);
 }
 
-static void lstm_forward_propagate_internal(lstm_model_t* model, double *input,
+static void lstm_forward_propagate_internal(lstm_model_t* model, numeric_t *input,
                             lstm_values_cache_t* cache_in, lstm_values_cache_t* cache_out,
                             int softmax)
 {
     int N, Y, S, i = 0;
-    double *h_old, *c_old, *X_one_hot;
+    numeric_t *h_old, *c_old, *X_one_hot;
     
     h_old = cache_in->h;
     c_old = cache_in->c;
@@ -585,7 +585,7 @@ static void lstm_forward_propagate_internal(lstm_model_t* model, double *input,
 #ifdef _WIN32
     // MSVC is not a C99 compiler, and does not support variable length arrays
     // MSVC is documented as conforming to C90
-    double *tmp;
+    numeric_t *tmp;
     if ( init_zero_vector(&tmp, N) ) 
     {
         fprintf(stderr, "%s.%s.%d init_zero_vector(.., %d) failed\r\n",
@@ -593,7 +593,7 @@ static void lstm_forward_propagate_internal(lstm_model_t* model, double *input,
         exit(1);
     }
 #else
-    double tmp[N]; // VLA must be supported.. May cause portability problems.. If so use init_zero_vector (will be slower).
+    numeric_t tmp[N]; // VLA must be supported.. May cause portability problems.. If so use init_zero_vector (will be slower).
 #endif
     
     copy_vector(cache_out->h_old, h_old, N);
@@ -670,7 +670,7 @@ static void lstm_forward_propagate_internal(lstm_model_t* model, double *input,
 }
 
 // model, input, state and cache values, &probs, whether or not to apply softmax
-void lstm_forward_propagate(lstm_model_t* model, double *input,
+void lstm_forward_propagate(lstm_model_t* model, numeric_t *input,
                             lstm_values_cache_t* cache_in, lstm_values_cache_t* cache_out,
                             int softmax)
 {
@@ -678,15 +678,15 @@ void lstm_forward_propagate(lstm_model_t* model, double *input,
     prg_begin = clock();
     lstm_forward_propagate_internal(model, input, cache_in, cache_out, softmax);
     prg_end = clock();
-    total_fw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
+    total_fw_time += (numeric_t)(prg_end - prg_begin) / (numeric_t)CLOCKS_PER_SEC;
 }
 
 //                            model, y_probabilities, y_correct, the next deltas, state and cache values, &gradients, &the next deltas
-static void lstm_backward_propagate_internal(lstm_model_t* model, double* y_probabilities, int y_correct,
+static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_probabilities, int y_correct,
                              lstm_values_next_cache_t* d_next, lstm_values_cache_t* cache_in,
                              lstm_model_t* gradients, lstm_values_next_cache_t* cache_out)
 {
-    double *h,*dldh_next,*dldc_next, *dldy, *dldh, *dldho, *dldhf, *dldhi, *dldhc, *dldc;
+    numeric_t *h,*dldh_next,*dldc_next, *dldy, *dldh, *dldho, *dldhf, *dldhi, *dldhc, *dldc;
     int N, Y, S;
     
     N = model->N;
@@ -770,7 +770,7 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, double* y_prob
 }
 
 // model, input, state and cache values, &probs, whether or not to apply softmax
-void lstm_backward_propagate(lstm_model_t* model, double* y_probabilities, int y_correct,
+void lstm_backward_propagate(lstm_model_t* model, numeric_t* y_probabilities, int y_correct,
                                   lstm_values_next_cache_t* d_next, lstm_values_cache_t* cache_in,
                                   lstm_model_t* gradients, lstm_values_next_cache_t* cache_out)
 {
@@ -779,7 +779,7 @@ void lstm_backward_propagate(lstm_model_t* model, double* y_probabilities, int y
     lstm_backward_propagate_internal(model, y_probabilities,
                                      y_correct, d_next, cache_in, gradients, cache_out);
     prg_end = clock();
-    total_bw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
+    total_bw_time += (numeric_t)(prg_end - prg_begin) / (numeric_t)CLOCKS_PER_SEC;
 }
 
 
@@ -1184,11 +1184,11 @@ int lstm_reinit_model(
     int Ynew = newNbrFeatures;
     int i, n;
     
-    double *newVectorWf;
-    double *newVectorWi;
-    double *newVectorWc;
-    double *newVectorWo;
-    double *newVectorWy;
+    numeric_t *newVectorWf;
+    numeric_t *newVectorWi;
+    numeric_t *newVectorWc;
+    numeric_t *newVectorWo;
+    numeric_t *newVectorWy;
     
     /* Sanity checks.. */
     if ( layers == 0 )
@@ -1336,21 +1336,21 @@ void lstm_output_string_layers_to_file(FILE * fp,lstm_model_t ** model_layers,
     int Y = model_layers[0]->Y;
     int N = model_layers[0]->N;
 #ifdef _WIN32
-    double *first_layer_input = NULL;
+    numeric_t *first_layer_input = NULL;
 #else
-    double first_layer_input[Y];
+    numeric_t first_layer_input[Y];
 #endif
     
     if ( fp == NULL )
         return;
     
 #ifdef _WIN32
-    first_layer_input = malloc(Y*sizeof(double));
+    first_layer_input = malloc(Y*sizeof(numeric_t));
     
     if ( first_layer_input == NULL ) 
     {
         fprintf(stderr, "%s.%s.%d malloc(%zu) failed\r\n",
-                __FILE__, __func__, __LINE__, Y*sizeof(double));
+                __FILE__, __func__, __LINE__, Y*sizeof(numeric_t));
         exit(1);
     }
 #endif
@@ -1440,17 +1440,17 @@ void lstm_output_string_layers(lstm_model_t ** model_layers, set_t* char_index_m
     int Y = model_layers[0]->Y;
     int N = model_layers[0]->N;
 #ifdef _WIN32
-    double * first_layer_input = NULL;
+    numeric_t * first_layer_input = NULL;
 #else
-    double first_layer_input[Y];
+    numeric_t first_layer_input[Y];
 #endif
     
 #ifdef _WIN32
-    first_layer_input = malloc(Y*sizeof(double));
+    first_layer_input = malloc(Y*sizeof(numeric_t));
     if ( first_layer_input == NULL ) 
     {
         fprintf(stderr, "%s.%s.%d malloc(%zu) failed\r\n",
-                __FILE__, __func__, __LINE__, Y*sizeof(double));
+                __FILE__, __func__, __LINE__, Y*sizeof(numeric_t));
         exit(1);
     }
 #endif
@@ -1549,17 +1549,17 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
     int p = 0;
     
 #ifdef _WIN32
-    double *first_layer_input = malloc(Y*sizeof(double));
+    numeric_t *first_layer_input = malloc(Y*sizeof(numeric_t));
     
     if ( first_layer_input == NULL ) 
     {
         fprintf(stderr, "%s.%s.%d malloc(%zu) failed\r\n",
-                __FILE__, __func__, __LINE__, Y*sizeof(double));
+                __FILE__, __func__, __LINE__, Y*sizeof(numeric_t));
         exit(1);
     }
-    memset(first_layer_input, 0, Y * sizeof(double));
+    memset(first_layer_input, 0, Y * sizeof(numeric_t));
 #else
-    double first_layer_input[Y];
+    numeric_t first_layer_input[Y];
 #endif
     
     caches_layers = e_calloc(layers, sizeof(lstm_values_cache_t**));
@@ -1669,7 +1669,7 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
 #endif
 }
 
-void lstm_store_progress(const char* filename, unsigned int n, unsigned int epoch, double loss, const char * tnh)
+void lstm_store_progress(const char* filename, unsigned int n, unsigned int epoch, numeric_t loss, const char * tnh)
 {
     FILE * fp;
     
@@ -1684,7 +1684,7 @@ void lstm_store_progress(const char* filename, unsigned int n, unsigned int epoc
 
 void lstm_model_regularization(lstm_model_t* model, lstm_model_t* gradients)
 {
-    double lambda = model->params->lambda;
+    numeric_t lambda = model->params->lambda;
     
     vectors_add_scalar_multiply(gradients->Wy, model->Wy, model->Y * model->N, lambda);
     vectors_add_scalar_multiply(gradients->Wi, model->Wi, model->N * model->S, lambda);
@@ -1702,13 +1702,13 @@ void lstm_model_regularization(lstm_model_t* model, lstm_model_t* gradients)
 //                        model, number of training points, X_train, Y_train
 void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                 set_t* char_index_mapping, unsigned int training_points,
-                int* X_train, int* Y_train, unsigned int layers, double *loss_out)
+                int* X_train, int* Y_train, unsigned int layers, numeric_t *loss_out)
 {
     unsigned int p, i = 0, b = 0, q = 0, e1 = 0, e2 = 0,
     e3 = 0, record_iteration = 0, tmp_count, trailing;
     unsigned int n = 0, epoch = 0;
-    double loss = -1, loss_tmp = 0.0, record_keeper = 0.0;
-    double initial_learning_rate = params->learning_rate;
+    numeric_t loss = -1, loss_tmp = 0.0, record_keeper = 0.0;
+    numeric_t initial_learning_rate = params->learning_rate;
     time_t time_iter;
     char time_buffer[40];
     unsigned long iterations = params->iterations;
@@ -1733,16 +1733,16 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
     lstm_model_t **gradient_layers, **gradient_layers_entry,  **M_layers = NULL, **R_layers = NULL;
     
 #ifdef _WIN32
-    double *first_layer_input = malloc(model_layers[0]->Y*sizeof(double));
+    numeric_t *first_layer_input = malloc(model_layers[0]->Y*sizeof(numeric_t));
     
     if ( first_layer_input == NULL )
     {
         fprintf(stderr, "%s.%s.%d malloc(%zu) failed\r\n",
-                __FILE__, __func__, __LINE__, model_layers[0]->Y*sizeof(double));
+                __FILE__, __func__, __LINE__, model_layers[0]->Y*sizeof(numeric_t));
         exit(1);
     }
 #else
-    double first_layer_input[model_layers[0]->Y];
+    numeric_t first_layer_input[model_layers[0]->Y];
 #endif
     
     if ( stateful )

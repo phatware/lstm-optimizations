@@ -447,7 +447,7 @@ int rnn_main(int argc, char *argv[])
     }
     else
     {
-        double loss;
+        numeric_t loss;
         
         assert(params.layers > 0);
         
