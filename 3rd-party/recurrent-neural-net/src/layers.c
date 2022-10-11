@@ -41,12 +41,12 @@
 #ifdef _BUILD_FOR_CUDA
 #include "cuda_utils.cuh"
 
-#define SHORT_VECTOR    100
+#define SHORT_VECTOR    50
 
 #endif // _BUILD_FOR_CUDA
 
 //    Y = AX + b        &Y,      A,       X,    B,     Rows (for A), Columns (for A)
-void  fully_connected_forward(double* Y, double* A, double* X, double* b, int R, int C)
+void  fully_connected_forward(double* Y, const double* A, const double* X, const double* b, int R, int C)
 {
     int i, n;
     for (i = 0; i < R; i++)
@@ -60,8 +60,8 @@ void  fully_connected_forward(double* Y, double* A, double* X, double* b, int R,
     }
 }
 //    Y = AX + b        dldY,       A,     X,        &dldA,    &dldX,    &dldb   Rows (A), Columns (A)
-void  fully_connected_backward(double* dldY, double* A, double* X,double* dldA,
-                               double* dldX, double* dldb, int R, int C)
+void fully_connected_backward(const double* dldY, const double* A, const double* X,
+    double* dldA, double* dldX, double* dldb, int R, int C)
 {
     int i, n;
     for (i = 0; i < R; i++)
@@ -89,14 +89,14 @@ void  fully_connected_backward(double* dldY, double* A, double* X,double* dldA,
     }
 }
 
-double cross_entropy(double* probabilities, int correct)
+double cross_entropy(const double* probabilities, int correct)
 {
     return -log(probabilities[correct]);
 }
 
 // Dealing with softmax layer, forward and backward
 //                &P,   Y,    features
-void  softmax_layers_forward(double* P, double* Y, int F, double temperature)
+void  softmax_layers_forward(double* P, const double* Y, int F, double temperature)
 {
     int f = 0;
     double sum = 0;
@@ -133,7 +133,7 @@ void  softmax_layers_forward(double* P, double* Y, int F, double temperature)
 #endif
 }
 //                    P,    c,  &dldh, rows
-void  softmax_loss_layer_backward(double* P, int c, double* dldh, int R)
+void  softmax_loss_layer_backward(const double* P, int c, double* dldh, int R)
 {
     int r = 0;
     
@@ -148,69 +148,70 @@ void  softmax_loss_layer_backward(double* P, int c, double* dldh, int R)
 // Other layers used: sigmoid and tanh
 //
 //    Y = sigmoid(X), &Y, X, length
-void  sigmoid_forward(double* Y, double* X, int L)
+void  sigmoid_forward(double* Y, const double* X, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
     {
-        cuda_forward_vectors_math_op(Y, X, L, vector_forward_sigmoid);
+        if (cudaSuccess == cuda_forward_vectors_math_op(Y, X, L, vector_forward_sigmoid))
+            return;
     }
-    else
 #endif // _BUILD_FOR_CUDA
+    int l = 0;
+    while (l < L)
     {
-        int l = 0;
-        while (l < L)
-        {
-            Y[l] = 1.0 / (1.0 + exp(-X[l]));
-            ++l;
-        }
+        Y[l] = 1.0 / (1.0 + exp(-X[l]));
+        ++l;
     }
 }
 //    Y = sigmoid(X), dldY, Y, &dldX, length
-void  sigmoid_backward(double* dldY, double* Y, double* dldX, int L)
+void  sigmoid_backward(const double* dldY, const double* Y, double* dldX, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
     {
-        cuda_backward_vectors_math_op(dldY, Y, dldX, L, vector_backward_sigmoid);
+        if (cudaSuccess == cuda_backward_vectors_math_op(dldX, Y, dldY, L, vector_backward_sigmoid))
+            return;
     }
-    else
 #endif // _BUILD_FOR_CUDA
+    int l = 0;
+    while (l < L)
     {
-        int l = 0;
-        while (l < L)
-        {
-            dldX[l] = (1.0 - Y[l]) * Y[l] * dldY[l];
-            ++l;
-        }
+        dldX[l] = (1.0 - Y[l]) * Y[l] * dldY[l];
+        ++l;
     }
 }
 
 //    Y = tanh(X), &Y, X, length
-void  tanh_forward(double* Y, double* X, int L)
+void  tanh_forward(double* Y, const double* X, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
     {
-        cuda_forward_vectors_math_op(Y, X, L, vector_forward_tanh);
+        if (cudaSuccess == cuda_forward_vectors_math_op(Y, X, L, vector_forward_tanh))
+            return;
     }
-    else
 #endif // _BUILD_FOR_CUDA
+    int l = 0;
+    while (l < L)
     {
-        int l = 0;
-        while (l < L)
-        {
-            Y[l] = tanh(X[l]);
-            ++l;
-        }
+        Y[l] = tanh(X[l]);
+        ++l;
     }
 }
 
 //    Y = tanh(X), dldY, Y, &dldX, length
-void  tanh_backward(double* dldY, double* Y, double* dldX, int L)
+void  tanh_backward(const double* dldY, const double* Y, double* dldX, int L)
 {
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        if (cudaSuccess == cuda_backward_vectors_math_op(dldX, Y, dldY, L, vector_backward_tanh))
+            return;
+    }
+#endif // _BUILD_FOR_CUDA
     int l = 0;
-    while ( l < L )
+    while (l < L)
     {
         dldX[l] = (1.0 - Y[l] * Y[l]) * dldY[l];
         ++l;
@@ -218,12 +219,19 @@ void  tanh_backward(double* dldY, double* Y, double* dldX, int L)
 }
 
 //    Y = tanf(X), &Y, X, length
-void  tanf_forward(double* Y, double* X, int L)
+void  tanf_forward(double* Y, const double* X, int L)
 {
-    int l = 0;
-    while ( l < L )
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
     {
-        Y[l] = X[l]/sqrt(1.0 + X[l] * X[l]);
+        if (cudaSuccess == cuda_forward_vectors_math_op(Y, Y, L, vector_forward_tanf))
+            return;
+    }
+#endif // _BUILD_FOR_CUDA
+    int l = 0;
+    while (l < L)
+    {
+        Y[l] = X[l] / sqrt(1.0 + X[l] * X[l]);
         ++l;
     }
 }
@@ -247,8 +255,15 @@ void  tanf_backward(double* dldY, double* Y, double* dldX, int L, int td)
 }
 #endif // 0
 
-void  tanf_backward(double* dldY, double* Y, double* dldX, int L)
+void  tanf_backward(const double* dldY, const double* Y, double* dldX, int L)
 {
+#ifdef _BUILD_FOR_CUDA
+    if (L > SHORT_VECTOR)
+    {
+        if (cudaSuccess == cuda_backward_vectors_math_op(dldX, Y, dldY, L, vector_backward_tanf))
+            return;
+    }
+#endif // _BUILD_FOR_CUDA
     int l = 0;
     double t;
     while (l < L)

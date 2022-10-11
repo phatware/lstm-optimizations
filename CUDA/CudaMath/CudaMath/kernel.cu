@@ -1,5 +1,5 @@
 ﻿
-#define __CUDACC__
+#define __CUDACC__ 1
 
 #include <cuda.h>
 #include "cuda_runtime.h"
@@ -35,55 +35,31 @@ private:
     time_point<clock_> beg_;
 };
 
-__global__ void eqKernel(double* c, const double* a, const double* b)
+
+__global__ void tanfKernel(double* c, const double* a, int size)
 {
-    int i = threadIdx.x;
-    c[i] = a[i];
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < size)
+        c[i] = a[i] / sqrt(1.0 + a[i] * a[i]);
 }
 
-__global__ void addKernel(double *c, const double*a, const double *b)
+__global__ void tanf2Kernel(double* c, const double* a, int size)
 {
-    int i = threadIdx.x;
-    c[i] = a[i] + b[i];
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < size)
+    {
+        c[i] = __dmul_rn(a[i], a[i]);
+        c[i] = __dadd_rn(1.0, c[i]);
+        c[i] = __dsqrt_rn(c[i]);
+        c[i] = __ddiv_rn(a[i], c[i]);
+    }
 }
 
-__global__ void subKernel(double* c, const double* a, const double* b)
+__global__ void tanhKernel(double* c, const double* a, int size)
 {
-    int i = threadIdx.x;
-    c[i] = a[i] - b[i];
-}
-
-__global__ void milKernel(double* c, const double* a, const double* b)
-{
-    int i = threadIdx.x;
-    c[i] = a[i] * b[i];
-}
-
-__global__ void divKernel(double* c, const double* a, const double* b)
-{
-    int i = threadIdx.x;
-    c[i] = a[i] / b[i];
-}
-
-__global__ void tanfKernel(double* c, const double* a, const double* b)
-{
-    int i = threadIdx.x;
-    c[i] = a[i] / __dsqrt_rn(1.0 + a[i] * a[i]);
-}
-
-__global__ void tanf2Kernel(double* c, const double* a, const double* b)
-{
-    int i = threadIdx.x;
-    c[i] = __dmul_rn(a[i], a[i]);
-    c[i] = __dadd_rn(1.0, c[i]);
-    c[i] = __dsqrt_rn(c[i]);
-    c[i] = __ddiv_rn(a[i], c[i]);
-}
-
-__global__ void tanhKernel(double* c, const double* a, const double* b)
-{
-    int i = threadIdx.x;
-    c[i] = tanhf(a[i]);
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < size)
+        c[i] = tanh(a[i]);
 }
 
 inline double tanf(double x)
@@ -122,26 +98,6 @@ inline double soft(double x)
     return x / (1.0 + abs(x));
 }
 
-
-static map<const char*, double> _FUNCS{
-    {"baseline", 0},
-    {"plus", 0},
-    {"minus", 0},
-    {"mult", 0},
-    {"div", 0},
-    {"sqrt", 0},
-    {"log", 0},
-    {"exp", 0},
-    {"elu", 0},
-    {"relu", 0},
-    {"leaky_relu", 0},
-    {"sigmoid", 0},
-    {"soft", 0},
-    {"tanh", 0},
-    {"tanf", 0},
-    {"tanf2", 0},
-};
-
 std::string getEnvVar(std::string const& key)
 {
     char* buff = NULL;
@@ -151,48 +107,16 @@ std::string getEnvVar(std::string const& key)
 }
 
 
-#define randf() ((double) rand()) / ((double) (RAND_MAX))
-#define FUNC_TEST(name, expr)                   \
-    total = 0;                                  \
-    tmr.reset();                                \
-    for (int64_t i = 0; i < 1000000; i++) {   \
-        a[0] = randf();                           \
-        a[1] = randf();                           \
-        a[2] = 0;       \
-cudaStatus = cudaMemcpy(r, a, 3 * sizeof(double), cudaMemcpyHostToDevice); \
-if (cudaStatus != cudaSuccess) \
-{ \
-    fprintf(stderr, "cudaMemcpy failed!"); \
-    return -1; \
-} \
-        expr<<<1, 1>>>(&r[2], &r[0], &r[1]); \
-    }                                           \
-cudaStatus = cudaDeviceSynchronize(); \
-if (cudaStatus != cudaSuccess) { \
-    fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus); \
-     return -1; \
-} \
-cudaStatus = cudaMemcpy(a, r, 3 * sizeof(double), cudaMemcpyDeviceToHost); \
-if (cudaStatus != cudaSuccess) { \
-    fprintf(stderr, "cudaMemcpy failed!"); \
-    return -1; \
-} \
-    double name = tmr.elapsed();                \
-    _FUNCS[#name] += (name - baseline + 0.05);  \
-    printf(#name);                              \
-    printf(":\n%.7f", name - baseline + 0.05);  \
-    printf("   r1=%.5f r2=%.5f  t=%.5f\n", a[0], a[1], a[2]); \
-    fflush(stdout);
-
+#define VECTOR_SIZE     1000000
+#define BLOCK_SIZE      1024
+#define TEST_COUNT      1000
 
 int main()
 {
-    double total, a[3] = { 0 };
     Timer tmr;
-
     cudaError_t cudaStatus;
-
-    double* r = NULL;
+    double* vector = NULL;
+    double* result = NULL;
 
     srand(42);
 
@@ -204,39 +128,95 @@ int main()
         return -1;
     }
 
-    cudaStatus = cudaMalloc((void**)&r, 3 * sizeof(double));
+    cudaStatus = cudaMalloc((void**)&vector, VECTOR_SIZE * sizeof(double));
     if (cudaStatus != cudaSuccess)
     {
         fprintf(stderr, "cudaMalloc failed!");
         return -1;
     }
 
-    FUNC_TEST(baseline, eqKernel);
-
-    for (int j = 0; j < 10; j++)
+    cudaStatus = cudaMalloc((void**)&result, VECTOR_SIZE * sizeof(double));
+    if (cudaStatus != cudaSuccess)
     {
-        // time various floating point operations.
-        //   subtracts off the baseline time to give
-        //   a better approximation of the cost
-        //   for just the specified operation
-        FUNC_TEST(plus, addKernel)
-        FUNC_TEST(minus, subKernel)
-        FUNC_TEST(mult, milKernel)
-        FUNC_TEST(div, divKernel)
-        
-        // FUNC_TEST(sqrt, std::sqrt(r[0]))
-        //FUNC_TEST(log, std::log(r[0]))
-        //FUNC_TEST(exp, std::exp(r[0]))
-        //FUNC_TEST(soft, soft(r[0]))
-        //FUNC_TEST(leaky_relu, leaky_relu(r[0], 0.001))
-        //FUNC_TEST(relu, relu(r[0]))
-        //FUNC_TEST(elu, elu(r[0]))
-        //FUNC_TEST(sigmoid, sigmoid(r[0]))
-
-        FUNC_TEST(tanh, tanhKernel)
-        FUNC_TEST(tanf, tanfKernel)
-        FUNC_TEST(tanf2, tanf2Kernel)
+        fprintf(stderr, "cudaMalloc failed!");
+        return -1;
     }
+
+    cout << "Initializing vector, please wait..." << endl;
+
+    int count = 0;
+    for (double d = -20.0; d < 20.0; d += 0.0001)
+    {
+        cudaMemcpy(&vector[count], &d, sizeof(double), cudaMemcpyHostToDevice);
+        count++;
+    }
+
+    cout << "Vector size " << count << "  Testing... " << endl;
+
+    double elapsed1 = 0;
+    double elapsed2 = 0;
+    double* data1 = NULL;
+    double* data2 = NULL;
+
+    dim3 block(BLOCK_SIZE);
+    dim3 grid((count / block.x) + 1);
+
+    for (int i = 0; i < TEST_COUNT; i++)
+    {
+        // TANF
+        tmr.reset();
+
+        tanfKernel << <grid, BLOCK_SIZE >> > (result, vector, count);
+
+        cudaStatus = cudaGetLastError();
+        if (cudaStatus != cudaSuccess)
+        {
+            fprintf(stderr, "addKernel launch failed: %s\r\n", cudaGetErrorString(cudaStatus));
+            return -1;
+        }
+        cudaStatus = cudaDeviceSynchronize();
+        if (cudaStatus != cudaSuccess)
+        {
+            fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\r\n", cudaStatus);
+            return -1;
+        }
+        elapsed1 += tmr.elapsed();
+
+        if (NULL == data1)
+        {
+            data1 = new double[count];
+            cudaMemcpy(data1, result, count * sizeof(double), cudaMemcpyDeviceToHost);
+        }
+        // TANH
+        tmr.reset();
+
+        tanhKernel << <grid, BLOCK_SIZE >> > (result, vector, count);
+
+        cudaStatus = cudaGetLastError();
+        if (cudaStatus != cudaSuccess)
+        {
+            fprintf(stderr, "addKernel launch failed: %s\r\n", cudaGetErrorString(cudaStatus));
+            return -1;
+        }
+
+        // cudaDeviceSynchronize waits for the kernel to finish, and returns
+        // any errors encountered during the launch.
+        cudaStatus = cudaDeviceSynchronize();
+        if (cudaStatus != cudaSuccess)
+        {
+            fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\r\n", cudaStatus);
+            return -1;
+        }
+        elapsed2 += tmr.elapsed();
+ 
+        if (NULL == data2)
+        {
+            data2 = new double[count];
+            cudaMemcpy(data2, result, count * sizeof(double), cudaMemcpyDeviceToHost);
+        }
+    }
+
+    cout << elapsed1 / TEST_COUNT << " vs " << elapsed2 / TEST_COUNT << endl;
 
     std::ofstream fout;
     std::stringstream sstr;
@@ -264,17 +244,13 @@ int main()
 #endif // WIN
 
     fout.open(sstr.str());
-
-    printf("\n\nFunction,Relative Time\n");
-    fout << "Function,Relative Time\n";
-    for (map<const char*, double>::iterator it = _FUNCS.begin(); it != _FUNCS.end(); it++)
+    fout << "func1,func2\n";
+    for (int i = 0; i < count; i++)
     {
-        printf("%s,%.2f\n", it->first, 10.0 * it->second);
-        fout << it->first << "," << 10.0 * it->second << "\n";
+        fout << data1[i] << "," << data2[i] << "\n";
     }
     fout.close();
 
-    cudaFree(r);
     cudaStatus = cudaDeviceReset();
     if (cudaStatus != cudaSuccess) 
     {

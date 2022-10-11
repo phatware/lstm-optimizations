@@ -1,9 +1,10 @@
 
+ #define __CUDACC__
 
 #include <stdio.h>
 #include "cuda_utils.cuh"
 
-#define BLOCK_SIZE  100
+#define BLOCK_SIZE  1000
 
 __global__ void addKernel(double* c, const double* a, const double* b, unsigned int size)
 {
@@ -65,14 +66,14 @@ __global__ void sqrtKernel(double* c, const double* a, unsigned int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i < size)
-        c[i] = sqrt(a[i]);
+        c[i] = (a[i]);
 }
 
 __global__ void tanfKernel(double* y, const double* x, unsigned int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i < size)
-        y[i] = x[i] / sqrt(1.0 + x[i] * x[i]);
+        y[i] = x[i] / __dsqrt_rn(1.0 + x[i] * x[i]);
 }
 
 __global__ void tanhKernel(double* y, const double* x, unsigned int size)
