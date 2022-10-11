@@ -1,5 +1,5 @@
-CC := gcc
-FLAGS := O3 Ofast msse3
+CC := clang
+FLAGS := O3 Ofast msse3 Wall D_SINGLE_PRECISION
 LIBS := m
 GCC_HINTS := all \
   unused \

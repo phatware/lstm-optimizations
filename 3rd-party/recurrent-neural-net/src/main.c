@@ -85,9 +85,9 @@ void usage(char *argv[]) {
     printf("\r\n");
  
     const char * type = sizeof(numeric_t) == sizeof(double) ? "double" : "single";
-    printf("%s (%s precision) compiled on %s at %s", argv[0], __DATE__, __TIME__);
+    printf("%s (%s precision) compiled on %s at %s", argv[0], type, __DATE__, __TIME__);
 #ifndef _WIN32
-    printf("with %s", __VERSION__);
+    printf(" with %s", __VERSION__);
 #endif // _WIN32
     printf("\r\n");
     exit(1);
