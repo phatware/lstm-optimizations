@@ -83,7 +83,13 @@ void usage(char *argv[]) {
     printf("\r\n");
     printf("Check std_conf.h to see what default values are used, these are set during compilation.\r\n");
     printf("\r\n");
-    printf("%s compiled %s %s\r\n", argv[0], __DATE__, __TIME__);
+ 
+    const char * type = sizeof(numeric_t) == sizeof(double) ? "double" : "single";
+    printf("%s (%s precision) compiled on %s at %s", argv[0], type, __DATE__, __TIME__);
+#ifndef _WIN32
+    printf(" with %s", __VERSION__);
+#endif // _WIN32
+    printf("\r\n");
     exit(1);
 }
 
