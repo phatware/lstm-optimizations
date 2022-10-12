@@ -262,30 +262,18 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
         printf("beta2t: %f\n", beta2t);
         exit(0);
     }
+        
+    vectors_copy_multiply_scalar(gradients->Wym, gradients->Wy, 1.0 - beta1, model->Y * model->N);
+    vectors_copy_multiply_scalar(gradients->Wim, gradients->Wi, 1.0 - beta1, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wcm, gradients->Wc, 1.0 - beta1, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wom, gradients->Wo, 1.0 - beta1, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wfm, gradients->Wf, 1.0 - beta1, model->N * model->S);
     
-    copy_vector(gradients->Wym, gradients->Wy, model->Y * model->N);
-    copy_vector(gradients->Wim, gradients->Wi, model->N * model->S);
-    copy_vector(gradients->Wcm, gradients->Wc, model->N * model->S);
-    copy_vector(gradients->Wom, gradients->Wo, model->N * model->S);
-    copy_vector(gradients->Wfm, gradients->Wf, model->N * model->S);
-    
-    copy_vector(gradients->bym, gradients->by, model->Y);
-    copy_vector(gradients->bim, gradients->bi, model->N);
-    copy_vector(gradients->bcm, gradients->bc, model->N);
-    copy_vector(gradients->bom, gradients->bo, model->N);
-    copy_vector(gradients->bfm, gradients->bf, model->N);
-    
-    vectors_multiply_scalar(gradients->Wym, 1.0 - beta1, model->Y * model->N);
-    vectors_multiply_scalar(gradients->Wim, 1.0 - beta1, model->N * model->S);
-    vectors_multiply_scalar(gradients->Wcm, 1.0 - beta1, model->N * model->S);
-    vectors_multiply_scalar(gradients->Wom, 1.0 - beta1, model->N * model->S);
-    vectors_multiply_scalar(gradients->Wfm, 1.0 - beta1, model->N * model->S);
-    
-    vectors_multiply_scalar(gradients->bym, 1.0 - beta1, model->Y);
-    vectors_multiply_scalar(gradients->bim, 1.0 - beta1, model->N);
-    vectors_multiply_scalar(gradients->bcm, 1.0 - beta1, model->N);
-    vectors_multiply_scalar(gradients->bom, 1.0 - beta1, model->N);
-    vectors_multiply_scalar(gradients->bfm, 1.0 - beta1, model->N);
+    vectors_copy_multiply_scalar(gradients->bym, gradients->by, 1.0 - beta1, model->Y);
+    vectors_copy_multiply_scalar(gradients->bim, gradients->bi, 1.0 - beta1, model->N);
+    vectors_copy_multiply_scalar(gradients->bcm, gradients->bc, 1.0 - beta1, model->N);
+    vectors_copy_multiply_scalar(gradients->bom, gradients->bo, 1.0 - beta1, model->N);
+    vectors_copy_multiply_scalar(gradients->bfm, gradients->bf, 1.0 - beta1, model->N);
     
     vectors_multiply_scalar(M->Wy, beta1, model->Y * model->N);
     vectors_multiply_scalar(M->Wi, beta1, model->N * model->S);
@@ -326,29 +314,17 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     vectors_multiply(gradients->bo, gradients->bo, model->N );
     vectors_multiply(gradients->bf, gradients->bf, model->N );
     
-    copy_vector(gradients->Wym, gradients->Wy, model->Y * model->N);
-    copy_vector(gradients->Wim, gradients->Wi, model->N * model->S);
-    copy_vector(gradients->Wcm, gradients->Wc, model->N * model->S);
-    copy_vector(gradients->Wom, gradients->Wo, model->N * model->S);
-    copy_vector(gradients->Wfm, gradients->Wf, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wym, gradients->Wy, 1.0 - beta2, model->Y * model->N);
+    vectors_copy_multiply_scalar(gradients->Wim, gradients->Wi, 1.0 - beta2, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wcm, gradients->Wc, 1.0 - beta2, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wom, gradients->Wo, 1.0 - beta2, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wfm, gradients->Wf, 1.0 - beta2, model->N * model->S);
     
-    copy_vector(gradients->bym, gradients->by, model->Y);
-    copy_vector(gradients->bim, gradients->bi, model->N);
-    copy_vector(gradients->bcm, gradients->bc, model->N);
-    copy_vector(gradients->bom, gradients->bo, model->N);
-    copy_vector(gradients->bfm, gradients->bf, model->N);
-    
-    vectors_multiply_scalar(gradients->Wym, 1.0 - beta2, model->Y * model->N);
-    vectors_multiply_scalar(gradients->Wim, 1.0 - beta2, model->N * model->S);
-    vectors_multiply_scalar(gradients->Wcm, 1.0 - beta2, model->N * model->S);
-    vectors_multiply_scalar(gradients->Wom, 1.0 - beta2, model->N * model->S);
-    vectors_multiply_scalar(gradients->Wfm, 1.0 - beta2, model->N * model->S);
-    
-    vectors_multiply_scalar(gradients->bym, 1.0 - beta2, model->Y);
-    vectors_multiply_scalar(gradients->bim, 1.0 - beta2, model->N);
-    vectors_multiply_scalar(gradients->bcm, 1.0 - beta2, model->N);
-    vectors_multiply_scalar(gradients->bom, 1.0 - beta2, model->N);
-    vectors_multiply_scalar(gradients->bfm, 1.0 - beta2, model->N);
+    vectors_copy_multiply_scalar(gradients->bym, gradients->by, 1.0 - beta2, model->Y);
+    vectors_copy_multiply_scalar(gradients->bim, gradients->bi, 1.0 - beta2, model->N);
+    vectors_copy_multiply_scalar(gradients->bcm, gradients->bc, 1.0 - beta2, model->N);
+    vectors_copy_multiply_scalar(gradients->bom, gradients->bo, 1.0 - beta2, model->N);
+    vectors_copy_multiply_scalar(gradients->bfm, gradients->bf, 1.0 - beta2, model->N);
     
     vectors_multiply_scalar(R->Wy, beta2, model->Y * model->N);
     vectors_multiply_scalar(R->Wi, beta2, model->N * model->S);
@@ -375,56 +351,32 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     vectors_add(R->bf, gradients->bf, model->N);
     
     // R done!
+        
+    vectors_copy_multiply_scalar(M->Wym, M->Wy, beta1t, model->Y * model->N);
+    vectors_copy_multiply_scalar(M->Wim, M->Wi, beta1t, model->N * model->S);
+    vectors_copy_multiply_scalar(M->Wcm, M->Wc, beta1t, model->N * model->S);
+    vectors_copy_multiply_scalar(M->Wom, M->Wo, beta1t, model->N * model->S);
+    vectors_copy_multiply_scalar(M->Wfm, M->Wf, beta1t, model->N * model->S);
     
-    copy_vector(M->Wym, M->Wy, model->Y * model->N);
-    copy_vector(M->Wim, M->Wi, model->N * model->S);
-    copy_vector(M->Wcm, M->Wc, model->N * model->S);
-    copy_vector(M->Wom, M->Wo, model->N * model->S);
-    copy_vector(M->Wfm, M->Wf, model->N * model->S);
-    
-    copy_vector(M->bym, M->by, model->Y);
-    copy_vector(M->bim, M->bi, model->N);
-    copy_vector(M->bcm, M->bc, model->N);
-    copy_vector(M->bom, M->bo, model->N);
-    copy_vector(M->bfm, M->bf, model->N);
-    
-    vectors_multiply_scalar(M->Wym, beta1t, model->Y * model->N);
-    vectors_multiply_scalar(M->Wim, beta1t, model->N * model->S);
-    vectors_multiply_scalar(M->Wcm, beta1t, model->N * model->S);
-    vectors_multiply_scalar(M->Wom, beta1t, model->N * model->S);
-    vectors_multiply_scalar(M->Wfm, beta1t, model->N * model->S);
-    
-    vectors_multiply_scalar(M->bym, beta1t, model->Y);
-    vectors_multiply_scalar(M->bim, beta1t, model->N);
-    vectors_multiply_scalar(M->bcm, beta1t, model->N);
-    vectors_multiply_scalar(M->bom, beta1t, model->N);
-    vectors_multiply_scalar(M->bfm, beta1t, model->N);
+    vectors_copy_multiply_scalar(M->bym, M->by, beta1t, model->Y);
+    vectors_copy_multiply_scalar(M->bim, M->bi, beta1t, model->N);
+    vectors_copy_multiply_scalar(M->bcm, M->bc, beta1t, model->N);
+    vectors_copy_multiply_scalar(M->bom, M->bo, beta1t, model->N);
+    vectors_copy_multiply_scalar(M->bfm, M->bf, beta1t, model->N);
     
     // M hat done!
     
-    copy_vector(R->Wym, R->Wy, model->Y * model->N);
-    copy_vector(R->Wim, R->Wi, model->N * model->S);
-    copy_vector(R->Wcm, R->Wc, model->N * model->S);
-    copy_vector(R->Wom, R->Wo, model->N * model->S);
-    copy_vector(R->Wfm, R->Wf, model->N * model->S);
+    vectors_copy_multiply_scalar(R->Wym, R->Wy, beta2t, model->Y * model->N);
+    vectors_copy_multiply_scalar(R->Wim, R->Wi, beta2t, model->N * model->S);
+    vectors_copy_multiply_scalar(R->Wcm, R->Wc, beta2t, model->N * model->S);
+    vectors_copy_multiply_scalar(R->Wom, R->Wo, beta2t, model->N * model->S);
+    vectors_copy_multiply_scalar(R->Wfm, R->Wf, beta2t, model->N * model->S);
     
-    copy_vector(R->bym, R->by, model->Y);
-    copy_vector(R->bim, R->bi, model->N);
-    copy_vector(R->bcm, R->bc, model->N);
-    copy_vector(R->bom, R->bo, model->N);
-    copy_vector(R->bfm, R->bf, model->N);
-    
-    vectors_multiply_scalar(R->Wym, beta2t, model->Y * model->N);
-    vectors_multiply_scalar(R->Wim, beta2t, model->N * model->S);
-    vectors_multiply_scalar(R->Wcm, beta2t, model->N * model->S);
-    vectors_multiply_scalar(R->Wom, beta2t, model->N * model->S);
-    vectors_multiply_scalar(R->Wfm, beta2t, model->N * model->S);
-    
-    vectors_multiply_scalar(R->bym, beta2t, model->Y);
-    vectors_multiply_scalar(R->bim, beta2t, model->N);
-    vectors_multiply_scalar(R->bcm, beta2t, model->N);
-    vectors_multiply_scalar(R->bom, beta2t, model->N);
-    vectors_multiply_scalar(R->bfm, beta2t, model->N);
+    vectors_copy_multiply_scalar(R->bym, R->by, beta2t, model->Y);
+    vectors_copy_multiply_scalar(R->bim, R->bi, beta2t, model->N);
+    vectors_copy_multiply_scalar(R->bcm, R->bc, beta2t, model->N);
+    vectors_copy_multiply_scalar(R->bom, R->bo, beta2t, model->N);
+    vectors_copy_multiply_scalar(R->bfm, R->bf, beta2t, model->N);
     
     // R hat done!
     
@@ -451,30 +403,18 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     vectors_add_scalar(R->bcm, 1e-7, model->N);
     vectors_add_scalar(R->bom, 1e-7, model->N);
     vectors_add_scalar(R->bfm, 1e-7, model->N);
+        
+    vectors_copy_multiply_scalar(gradients->Wym, M->Wym, model->params->learning_rate, model->Y * model->N);
+    vectors_copy_multiply_scalar(gradients->Wim, M->Wim, model->params->learning_rate, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wcm, M->Wcm, model->params->learning_rate, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wom, M->Wom, model->params->learning_rate, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wfm, M->Wfm, model->params->learning_rate, model->N * model->S);
     
-    copy_vector(gradients->Wym, M->Wym, model->Y * model->N);
-    copy_vector(gradients->Wim, M->Wim, model->N * model->S);
-    copy_vector(gradients->Wcm, M->Wcm, model->N * model->S);
-    copy_vector(gradients->Wom, M->Wom, model->N * model->S);
-    copy_vector(gradients->Wfm, M->Wfm, model->N * model->S);
-    
-    copy_vector(gradients->bym, M->bym, model->Y);
-    copy_vector(gradients->bim, M->bim, model->N);
-    copy_vector(gradients->bcm, M->bcm, model->N);
-    copy_vector(gradients->bom, M->bom, model->N);
-    copy_vector(gradients->bfm, M->bfm, model->N);
-    
-    vectors_scalar_multiply(gradients->Wym, model->params->learning_rate, model->Y * model->N);
-    vectors_scalar_multiply(gradients->Wim, model->params->learning_rate, model->N * model->S);
-    vectors_scalar_multiply(gradients->Wcm, model->params->learning_rate, model->N * model->S);
-    vectors_scalar_multiply(gradients->Wom, model->params->learning_rate, model->N * model->S);
-    vectors_scalar_multiply(gradients->Wfm, model->params->learning_rate, model->N * model->S);
-    
-    vectors_scalar_multiply(gradients->bym, model->params->learning_rate, model->Y);
-    vectors_scalar_multiply(gradients->bim, model->params->learning_rate, model->N);
-    vectors_scalar_multiply(gradients->bcm, model->params->learning_rate, model->N);
-    vectors_scalar_multiply(gradients->bom, model->params->learning_rate, model->N);
-    vectors_scalar_multiply(gradients->bfm, model->params->learning_rate, model->N);
+    vectors_copy_multiply_scalar(gradients->bym, M->bym, model->params->learning_rate, model->Y);
+    vectors_copy_multiply_scalar(gradients->bim, M->bim, model->params->learning_rate, model->N);
+    vectors_copy_multiply_scalar(gradients->bcm, M->bcm, model->params->learning_rate, model->N);
+    vectors_copy_multiply_scalar(gradients->bom, M->bom, model->params->learning_rate, model->N);
+    vectors_copy_multiply_scalar(gradients->bfm, M->bfm, model->params->learning_rate, model->N);
     
     vectors_div(gradients->Wym, R->Wym, model->Y * model->N);
     vectors_div(gradients->Wim, R->Wim, model->N * model->S);
@@ -632,11 +572,8 @@ static void lstm_forward_propagate_internal(lstm_model_t* model, numeric_t *inpu
         tanh_forward(cache_out->hc, cache_out->hc, N);
     
     // c = hf * c_old + hi * hc
-    copy_vector(cache_out->c, cache_out->hf, N);
-    vectors_multiply(cache_out->c, c_old, N);
-    copy_vector(tmp, cache_out->hi, N);
-    vectors_multiply(tmp, cache_out->hc, N);
-    
+    vectors_copy_multiply(cache_out->c, cache_out->hf, c_old, N);
+    vectors_copy_multiply(tmp, cache_out->hc, cache_out->hi, N);    
     vectors_add(cache_out->c, tmp, N);
     
     // h = ho * tanh_c_cache
@@ -645,8 +582,7 @@ static void lstm_forward_propagate_internal(lstm_model_t* model, numeric_t *inpu
     else
         tanh_forward(cache_out->tanh_c_cache, cache_out->c, N);
     
-    copy_vector(cache_out->h, cache_out->ho, N);
-    vectors_multiply(cache_out->h, cache_out->tanh_c_cache, N);
+    vectors_copy_multiply(cache_out->h, cache_out->tanh_c_cache, cache_out->ho, N);
     
     // probs = softmax ( Wy*h + by )
     fully_connected_forward(cache_out->probs, model->Wy, cache_out->h, model->by, Y, N);
@@ -722,12 +658,10 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_p
     fully_connected_backward(dldy, model->Wy, h, gradients->Wy, dldh, gradients->by, Y, N);
     vectors_add(dldh, dldh_next, N);
     
-    copy_vector(dldho, dldh, N);
-    vectors_multiply(dldho, cache_in->tanh_c_cache, N);
+    vectors_copy_multiply(dldho, dldh, cache_in->tanh_c_cache, N);
     sigmoid_backward(dldho, cache_in->ho, dldho, N);
     
-    copy_vector(dldc, dldh, N);
-    vectors_multiply(dldc, cache_in->ho, N);
+    vectors_copy_multiply(dldc, dldh, cache_in->ho, N);
     
     if (model->params->use_tanf)
         tanf_backward(dldc, cache_in->tanh_c_cache, dldc, N);
@@ -736,16 +670,13 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_p
 
     vectors_add(dldc, dldc_next, N);
     
-    copy_vector(dldhf, dldc, N);
-    vectors_multiply(dldhf, cache_in->c_old, N);
+    vectors_copy_multiply(dldhf, dldc, cache_in->c_old, N);
     sigmoid_backward(dldhf, cache_in->hf, dldhf, N);
     
-    copy_vector(dldhi, cache_in->hc, N);
-    vectors_multiply(dldhi, dldc, N);
+    vectors_copy_multiply(dldhi, cache_in->hc, dldc, N);
     sigmoid_backward(dldhi, cache_in->hi, dldhi, N);
     
-    copy_vector(dldhc, cache_in->hi, N);
-    vectors_multiply(dldhc, dldc, N);
+    vectors_copy_multiply(dldhc, cache_in->hi, dldc, N);
     if (model->params->use_tanf)
         tanf_backward(dldhc, cache_in->hc, dldhc, N);
     else
@@ -762,8 +693,7 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_p
     vectors_add(gradients->dldXi, gradients->dldXf, S);
     
     copy_vector(cache_out->dldh_next, gradients->dldXi, N);
-    copy_vector(cache_out->dldc_next, cache_in->hf, N);
-    vectors_multiply(cache_out->dldc_next, dldc, N);
+    vectors_copy_multiply(cache_out->dldc_next, cache_in->hf, dldc, N);
     
     // To pass on to next layer
     copy_vector(cache_out->dldY_pass, &gradients->dldXi[N], model->X);

@@ -74,22 +74,6 @@ void  vectors_add_scalar(numeric_t* A, numeric_t B, int L)
     }
 }
 
-void  vectors_scalar_multiply(numeric_t* A, numeric_t d, int L)
-{
-#ifdef _BUILD_FOR_CUDA
-    if (L > SHORT_VECTOR)
-    {
-        if (cudaSuccess == cuda_inplace_vectors_math_op(A, NULL, L, d, vector_math_scalar_multiply))
-            return;
-    }
-#endif // _BUILD_FOR_CUDA
-    int l = 0;
-    while (l < L) {
-        A[l] *= d;
-        ++l;
-    }
-}
-
 // A = A + (B * s)
 void  vectors_add_scalar_multiply(numeric_t* A, numeric_t* B, int L, numeric_t s)
 {
@@ -158,16 +142,18 @@ void  vector_sqrt(numeric_t* A, int L)
 // A = A - (B * s)
 void  vectors_subtract_scalar_multiply(numeric_t* A, numeric_t* B, int L, numeric_t s)
 {
-#ifdef _BUILD_FOR_CUDA
-    if (L > SHORT_VECTOR)
-    {
-        if (cudaSuccess == cuda_inplace_vectors_math_op(A, B, L, s, vector_math_subtract_scalar_multiply))
-            return;
-    }
-#endif // _BUILD_FOR_CUDA
     int l = 0;
     while (l < L) {
         A[l] -= B[l] * s;
+        ++l;
+    }
+}
+
+void  vectors_copy_multiply(numeric_t* C, const numeric_t* A, const numeric_t* B,  int L)
+{
+    int l = 0;
+    while (l < L) {
+        C[l] = A[l] * B[l];
         ++l;
     }
 }
@@ -187,6 +173,16 @@ void  vectors_multiply(numeric_t* A, numeric_t* B, int L)
         ++l;
     }
 }
+
+void  vectors_copy_multiply_scalar(numeric_t* A, const numeric_t* B, numeric_t s, int L)
+{
+    int l = 0;
+    while (l < L) {
+        A[l] = B[l] * s;
+        ++l;
+    }
+}
+
 
 void  vectors_multiply_scalar(numeric_t* A, numeric_t b, int L)
 {

@@ -47,13 +47,17 @@ typedef double numeric_t;
 void 	vectors_add(numeric_t*, numeric_t*, int);
 void 	vectors_subtract(numeric_t*, numeric_t*, int);
 void 	vectors_add_scalar_multiply(numeric_t*, numeric_t*, int, numeric_t);
-void 	vectors_scalar_multiply(numeric_t*, numeric_t, int);
 void 	vectors_subtract_scalar_multiply(numeric_t*, numeric_t*, int, numeric_t);
 void 	vectors_add_scalar(numeric_t*, numeric_t, int );
 void 	vectors_div(numeric_t*, numeric_t*, int);
 void 	vector_sqrt(numeric_t*, int);
 void 	vector_store_json(numeric_t*, int, FILE *);
 void 	vector_store_as_matrix_json(numeric_t*, int, int, FILE *);
+
+// A = B * s
+void  vectors_copy_multiply_scalar(numeric_t* A, const numeric_t* B, numeric_t s, int L);
+// C = A * B
+void  vectors_copy_multiply(numeric_t* C, const numeric_t* A, const numeric_t* B,  int L);
 
 //		A = A + B		A,		B,    R, C
 void 	matrix_add(numeric_t**, numeric_t**, int, int);
@@ -102,6 +106,7 @@ void 	matrix_store(numeric_t **, int, int, FILE *);
 void 	matrix_read(numeric_t **, int, int, FILE *);
 void 	vector_read_ascii(numeric_t *, int, FILE *);
 void 	vector_store_ascii(numeric_t *, int, FILE *);
+
 
 // Memory
 void*   e_calloc(size_t count, size_t size);
