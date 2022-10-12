@@ -42,13 +42,13 @@ typedef double numeric_t;
 
 #define _randf ((numeric_t) ((double)rand() / (double)RAND_MAX))
 
-// used on contigous vectors
+// used on contigious vectors
 //		A = A + B		A,		B,    l
 void 	vectors_add(numeric_t*, numeric_t*, int);
-void 	vectors_substract(numeric_t*, numeric_t*, int);
+void 	vectors_subtract(numeric_t*, numeric_t*, int);
 void 	vectors_add_scalar_multiply(numeric_t*, numeric_t*, int, numeric_t);
 void 	vectors_scalar_multiply(numeric_t*, numeric_t, int);
-void 	vectors_substract_scalar_multiply(numeric_t*, numeric_t*, int, numeric_t);
+void 	vectors_subtract_scalar_multiply(numeric_t*, numeric_t*, int, numeric_t);
 void 	vectors_add_scalar(numeric_t*, numeric_t, int );
 void 	vectors_div(numeric_t*, numeric_t*, int);
 void 	vector_sqrt(numeric_t*, int);
@@ -57,14 +57,14 @@ void 	vector_store_as_matrix_json(numeric_t*, int, int, FILE *);
 
 //		A = A + B		A,		B,    R, C
 void 	matrix_add(numeric_t**, numeric_t**, int, int);
-void 	matrix_substract(numeric_t**, numeric_t**, int, int);
+void 	matrix_subtract(numeric_t**, numeric_t**, int, int);
 //		A = A*b		A,		b,    R, C
 void 	matrix_scalar_multiply(numeric_t**, numeric_t, int, int);
 
 //		A = A * B		A,		B,    l
 void 	vectors_multiply(numeric_t*, numeric_t*, int);
 //		A = A * b		A,		b,    l
-void 	vectors_mutliply_scalar(numeric_t*, numeric_t, int);
+void 	vectors_multiply_scalar(numeric_t*, numeric_t, int);
 //		A = random( (R, C) ) / sqrt(R / 2), &A, R, C
 int 	init_random_matrix(numeric_t***, int, int);
 //		A = 0.0s, &A, R, C

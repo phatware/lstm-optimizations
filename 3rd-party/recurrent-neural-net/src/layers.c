@@ -268,7 +268,6 @@ void  tanf_backward(const numeric_t* dldY, const numeric_t* Y, numeric_t* dldX, 
     numeric_t t;
     while (l < L)
     {
-        // TODO: test derivative (overfitting faster than tanh()?)
         t = (1.0 - Y[l] * Y[l]);
         dldX[l] = sqrt(t * t * t) * dldY[l];
         ++l;

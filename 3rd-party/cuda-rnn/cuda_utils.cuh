@@ -10,12 +10,12 @@ extern "C" {
 
     typedef enum {
         vector_math_add,
-        vector_math_substract,
+        vector_math_subtract,
         vector_math_divide,
         vector_math_multiply,
         vector_math_scalar_multiply,
         vector_math_scalar_add,
-        vector_math_substact_scalar_multiply,
+        vector_math_subtract_scalar_multiply,
         vector_math_add_scalar_multiply,
         vector_math_sqrt,
     } vector_math_op_t;

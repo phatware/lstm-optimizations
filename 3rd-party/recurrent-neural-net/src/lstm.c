@@ -275,29 +275,29 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     copy_vector(gradients->bom, gradients->bo, model->N);
     copy_vector(gradients->bfm, gradients->bf, model->N);
     
-    vectors_mutliply_scalar(gradients->Wym, 1.0 - beta1, model->Y * model->N);
-    vectors_mutliply_scalar(gradients->Wim, 1.0 - beta1, model->N * model->S);
-    vectors_mutliply_scalar(gradients->Wcm, 1.0 - beta1, model->N * model->S);
-    vectors_mutliply_scalar(gradients->Wom, 1.0 - beta1, model->N * model->S);
-    vectors_mutliply_scalar(gradients->Wfm, 1.0 - beta1, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wym, 1.0 - beta1, model->Y * model->N);
+    vectors_multiply_scalar(gradients->Wim, 1.0 - beta1, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wcm, 1.0 - beta1, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wom, 1.0 - beta1, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wfm, 1.0 - beta1, model->N * model->S);
     
-    vectors_mutliply_scalar(gradients->bym, 1.0 - beta1, model->Y);
-    vectors_mutliply_scalar(gradients->bim, 1.0 - beta1, model->N);
-    vectors_mutliply_scalar(gradients->bcm, 1.0 - beta1, model->N);
-    vectors_mutliply_scalar(gradients->bom, 1.0 - beta1, model->N);
-    vectors_mutliply_scalar(gradients->bfm, 1.0 - beta1, model->N);
+    vectors_multiply_scalar(gradients->bym, 1.0 - beta1, model->Y);
+    vectors_multiply_scalar(gradients->bim, 1.0 - beta1, model->N);
+    vectors_multiply_scalar(gradients->bcm, 1.0 - beta1, model->N);
+    vectors_multiply_scalar(gradients->bom, 1.0 - beta1, model->N);
+    vectors_multiply_scalar(gradients->bfm, 1.0 - beta1, model->N);
     
-    vectors_mutliply_scalar(M->Wy, beta1, model->Y * model->N);
-    vectors_mutliply_scalar(M->Wi, beta1, model->N * model->S);
-    vectors_mutliply_scalar(M->Wc, beta1, model->N * model->S);
-    vectors_mutliply_scalar(M->Wo, beta1, model->N * model->S);
-    vectors_mutliply_scalar(M->Wf, beta1, model->N * model->S);
+    vectors_multiply_scalar(M->Wy, beta1, model->Y * model->N);
+    vectors_multiply_scalar(M->Wi, beta1, model->N * model->S);
+    vectors_multiply_scalar(M->Wc, beta1, model->N * model->S);
+    vectors_multiply_scalar(M->Wo, beta1, model->N * model->S);
+    vectors_multiply_scalar(M->Wf, beta1, model->N * model->S);
     
-    vectors_mutliply_scalar(M->by, beta1, model->Y);
-    vectors_mutliply_scalar(M->bi, beta1, model->N);
-    vectors_mutliply_scalar(M->bc, beta1, model->N);
-    vectors_mutliply_scalar(M->bo, beta1, model->N);
-    vectors_mutliply_scalar(M->bf, beta1, model->N);
+    vectors_multiply_scalar(M->by, beta1, model->Y);
+    vectors_multiply_scalar(M->bi, beta1, model->N);
+    vectors_multiply_scalar(M->bc, beta1, model->N);
+    vectors_multiply_scalar(M->bo, beta1, model->N);
+    vectors_multiply_scalar(M->bf, beta1, model->N);
     
     vectors_add(M->Wy, gradients->Wy, model->Y * model->N);
     vectors_add(M->Wi, gradients->Wi, model->N * model->S);
@@ -338,29 +338,29 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     copy_vector(gradients->bom, gradients->bo, model->N);
     copy_vector(gradients->bfm, gradients->bf, model->N);
     
-    vectors_mutliply_scalar(gradients->Wym, 1.0 - beta2, model->Y * model->N);
-    vectors_mutliply_scalar(gradients->Wim, 1.0 - beta2, model->N * model->S);
-    vectors_mutliply_scalar(gradients->Wcm, 1.0 - beta2, model->N * model->S);
-    vectors_mutliply_scalar(gradients->Wom, 1.0 - beta2, model->N * model->S);
-    vectors_mutliply_scalar(gradients->Wfm, 1.0 - beta2, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wym, 1.0 - beta2, model->Y * model->N);
+    vectors_multiply_scalar(gradients->Wim, 1.0 - beta2, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wcm, 1.0 - beta2, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wom, 1.0 - beta2, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wfm, 1.0 - beta2, model->N * model->S);
     
-    vectors_mutliply_scalar(gradients->bym, 1.0 - beta2, model->Y);
-    vectors_mutliply_scalar(gradients->bim, 1.0 - beta2, model->N);
-    vectors_mutliply_scalar(gradients->bcm, 1.0 - beta2, model->N);
-    vectors_mutliply_scalar(gradients->bom, 1.0 - beta2, model->N);
-    vectors_mutliply_scalar(gradients->bfm, 1.0 - beta2, model->N);
+    vectors_multiply_scalar(gradients->bym, 1.0 - beta2, model->Y);
+    vectors_multiply_scalar(gradients->bim, 1.0 - beta2, model->N);
+    vectors_multiply_scalar(gradients->bcm, 1.0 - beta2, model->N);
+    vectors_multiply_scalar(gradients->bom, 1.0 - beta2, model->N);
+    vectors_multiply_scalar(gradients->bfm, 1.0 - beta2, model->N);
     
-    vectors_mutliply_scalar(R->Wy, beta2, model->Y * model->N);
-    vectors_mutliply_scalar(R->Wi, beta2, model->N * model->S);
-    vectors_mutliply_scalar(R->Wc, beta2, model->N * model->S);
-    vectors_mutliply_scalar(R->Wo, beta2, model->N * model->S);
-    vectors_mutliply_scalar(R->Wf, beta2, model->N * model->S);
+    vectors_multiply_scalar(R->Wy, beta2, model->Y * model->N);
+    vectors_multiply_scalar(R->Wi, beta2, model->N * model->S);
+    vectors_multiply_scalar(R->Wc, beta2, model->N * model->S);
+    vectors_multiply_scalar(R->Wo, beta2, model->N * model->S);
+    vectors_multiply_scalar(R->Wf, beta2, model->N * model->S);
     
-    vectors_mutliply_scalar(R->by, beta2, model->Y);
-    vectors_mutliply_scalar(R->bi, beta2, model->N);
-    vectors_mutliply_scalar(R->bc, beta2, model->N);
-    vectors_mutliply_scalar(R->bo, beta2, model->N);
-    vectors_mutliply_scalar(R->bf, beta2, model->N);
+    vectors_multiply_scalar(R->by, beta2, model->Y);
+    vectors_multiply_scalar(R->bi, beta2, model->N);
+    vectors_multiply_scalar(R->bc, beta2, model->N);
+    vectors_multiply_scalar(R->bo, beta2, model->N);
+    vectors_multiply_scalar(R->bf, beta2, model->N);
     
     vectors_add(R->Wy, gradients->Wy, model->Y * model->N);
     vectors_add(R->Wi, gradients->Wi, model->N * model->S);
@@ -388,17 +388,17 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     copy_vector(M->bom, M->bo, model->N);
     copy_vector(M->bfm, M->bf, model->N);
     
-    vectors_mutliply_scalar(M->Wym, beta1t, model->Y * model->N);
-    vectors_mutliply_scalar(M->Wim, beta1t, model->N * model->S);
-    vectors_mutliply_scalar(M->Wcm, beta1t, model->N * model->S);
-    vectors_mutliply_scalar(M->Wom, beta1t, model->N * model->S);
-    vectors_mutliply_scalar(M->Wfm, beta1t, model->N * model->S);
+    vectors_multiply_scalar(M->Wym, beta1t, model->Y * model->N);
+    vectors_multiply_scalar(M->Wim, beta1t, model->N * model->S);
+    vectors_multiply_scalar(M->Wcm, beta1t, model->N * model->S);
+    vectors_multiply_scalar(M->Wom, beta1t, model->N * model->S);
+    vectors_multiply_scalar(M->Wfm, beta1t, model->N * model->S);
     
-    vectors_mutliply_scalar(M->bym, beta1t, model->Y);
-    vectors_mutliply_scalar(M->bim, beta1t, model->N);
-    vectors_mutliply_scalar(M->bcm, beta1t, model->N);
-    vectors_mutliply_scalar(M->bom, beta1t, model->N);
-    vectors_mutliply_scalar(M->bfm, beta1t, model->N);
+    vectors_multiply_scalar(M->bym, beta1t, model->Y);
+    vectors_multiply_scalar(M->bim, beta1t, model->N);
+    vectors_multiply_scalar(M->bcm, beta1t, model->N);
+    vectors_multiply_scalar(M->bom, beta1t, model->N);
+    vectors_multiply_scalar(M->bfm, beta1t, model->N);
     
     // M hat done!
     
@@ -414,17 +414,17 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     copy_vector(R->bom, R->bo, model->N);
     copy_vector(R->bfm, R->bf, model->N);
     
-    vectors_mutliply_scalar(R->Wym, beta2t, model->Y * model->N);
-    vectors_mutliply_scalar(R->Wim, beta2t, model->N * model->S);
-    vectors_mutliply_scalar(R->Wcm, beta2t, model->N * model->S);
-    vectors_mutliply_scalar(R->Wom, beta2t, model->N * model->S);
-    vectors_mutliply_scalar(R->Wfm, beta2t, model->N * model->S);
+    vectors_multiply_scalar(R->Wym, beta2t, model->Y * model->N);
+    vectors_multiply_scalar(R->Wim, beta2t, model->N * model->S);
+    vectors_multiply_scalar(R->Wcm, beta2t, model->N * model->S);
+    vectors_multiply_scalar(R->Wom, beta2t, model->N * model->S);
+    vectors_multiply_scalar(R->Wfm, beta2t, model->N * model->S);
     
-    vectors_mutliply_scalar(R->bym, beta2t, model->Y);
-    vectors_mutliply_scalar(R->bim, beta2t, model->N);
-    vectors_mutliply_scalar(R->bcm, beta2t, model->N);
-    vectors_mutliply_scalar(R->bom, beta2t, model->N);
-    vectors_mutliply_scalar(R->bfm, beta2t, model->N);
+    vectors_multiply_scalar(R->bym, beta2t, model->Y);
+    vectors_multiply_scalar(R->bim, beta2t, model->N);
+    vectors_multiply_scalar(R->bcm, beta2t, model->N);
+    vectors_multiply_scalar(R->bom, beta2t, model->N);
+    vectors_multiply_scalar(R->bfm, beta2t, model->N);
     
     // R hat done!
     
@@ -488,34 +488,34 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     vectors_div(gradients->bom, R->bom, model->N);
     vectors_div(gradients->bfm, R->bfm, model->N);
     
-    vectors_substract(model->Wy, gradients->Wym, model->Y * model->N);
-    vectors_substract(model->Wi, gradients->Wim, model->N * model->S);
-    vectors_substract(model->Wc, gradients->Wcm, model->N * model->S);
-    vectors_substract(model->Wo, gradients->Wom, model->N * model->S);
-    vectors_substract(model->Wf, gradients->Wfm, model->N * model->S);
+    vectors_subtract(model->Wy, gradients->Wym, model->Y * model->N);
+    vectors_subtract(model->Wi, gradients->Wim, model->N * model->S);
+    vectors_subtract(model->Wc, gradients->Wcm, model->N * model->S);
+    vectors_subtract(model->Wo, gradients->Wom, model->N * model->S);
+    vectors_subtract(model->Wf, gradients->Wfm, model->N * model->S);
     
-    vectors_substract(model->by, gradients->bym, model->Y);
-    vectors_substract(model->bi, gradients->bim, model->N);
-    vectors_substract(model->bc, gradients->bcm, model->N);
-    vectors_substract(model->bo, gradients->bom, model->N);
-    vectors_substract(model->bf, gradients->bfm, model->N);
+    vectors_subtract(model->by, gradients->bym, model->Y);
+    vectors_subtract(model->bi, gradients->bim, model->N);
+    vectors_subtract(model->bc, gradients->bcm, model->N);
+    vectors_subtract(model->bo, gradients->bom, model->N);
+    vectors_subtract(model->bf, gradients->bfm, model->N);
 }
 
 // A = A - alpha * m, m = momentum * m + ( 1 - momentum ) * dldA
 void gradients_decend(lstm_model_t* model, lstm_model_t* gradients)
 {
     // Computing momumentum * m
-    vectors_mutliply_scalar(gradients->Wym, model->params->momentum, model->Y * model->N);
-    vectors_mutliply_scalar(gradients->Wim, model->params->momentum, model->N * model->S);
-    vectors_mutliply_scalar(gradients->Wcm, model->params->momentum, model->N * model->S);
-    vectors_mutliply_scalar(gradients->Wom, model->params->momentum, model->N * model->S);
-    vectors_mutliply_scalar(gradients->Wfm, model->params->momentum, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wym, model->params->momentum, model->Y * model->N);
+    vectors_multiply_scalar(gradients->Wim, model->params->momentum, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wcm, model->params->momentum, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wom, model->params->momentum, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wfm, model->params->momentum, model->N * model->S);
     
-    vectors_mutliply_scalar(gradients->bym, model->params->momentum, model->Y);
-    vectors_mutliply_scalar(gradients->bim, model->params->momentum, model->N);
-    vectors_mutliply_scalar(gradients->bcm, model->params->momentum, model->N);
-    vectors_mutliply_scalar(gradients->bom, model->params->momentum, model->N);
-    vectors_mutliply_scalar(gradients->bfm, model->params->momentum, model->N);
+    vectors_multiply_scalar(gradients->bym, model->params->momentum, model->Y);
+    vectors_multiply_scalar(gradients->bim, model->params->momentum, model->N);
+    vectors_multiply_scalar(gradients->bcm, model->params->momentum, model->N);
+    vectors_multiply_scalar(gradients->bom, model->params->momentum, model->N);
+    vectors_multiply_scalar(gradients->bfm, model->params->momentum, model->N);
     
     // Computing m = momentum * m + (1 - momentum) * dldA
     vectors_add_scalar_multiply(gradients->Wym, gradients->Wy, model->Y * model->N, 1.0 - model->params->momentum);
@@ -531,17 +531,17 @@ void gradients_decend(lstm_model_t* model, lstm_model_t* gradients)
     vectors_add_scalar_multiply(gradients->bfm, gradients->bf, model->N, 1.0 - model->params->momentum);
     
     // Computing A = A - alpha * m
-    vectors_substract_scalar_multiply(model->Wy, gradients->Wym, model->Y * model->N, model->params->learning_rate);
-    vectors_substract_scalar_multiply(model->Wi, gradients->Wim, model->N * model->S, model->params->learning_rate);
-    vectors_substract_scalar_multiply(model->Wc, gradients->Wcm, model->N * model->S, model->params->learning_rate);
-    vectors_substract_scalar_multiply(model->Wo, gradients->Wom, model->N * model->S, model->params->learning_rate);
-    vectors_substract_scalar_multiply(model->Wf, gradients->Wfm, model->N * model->S, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->Wy, gradients->Wym, model->Y * model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->Wi, gradients->Wim, model->N * model->S, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->Wc, gradients->Wcm, model->N * model->S, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->Wo, gradients->Wom, model->N * model->S, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->Wf, gradients->Wfm, model->N * model->S, model->params->learning_rate);
     
-    vectors_substract_scalar_multiply(model->by, gradients->bym, model->Y, model->params->learning_rate);
-    vectors_substract_scalar_multiply(model->bi, gradients->bim, model->N, model->params->learning_rate);
-    vectors_substract_scalar_multiply(model->bc, gradients->bcm, model->N, model->params->learning_rate);
-    vectors_substract_scalar_multiply(model->bf, gradients->bfm, model->N, model->params->learning_rate);
-    vectors_substract_scalar_multiply(model->bo, gradients->bom, model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->by, gradients->bym, model->Y, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->bi, gradients->bim, model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->bc, gradients->bcm, model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->bf, gradients->bfm, model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->bo, gradients->bom, model->N, model->params->learning_rate);
 }
 
 void lstm_values_next_cache_init(lstm_values_next_cache_t** d_next_to_set, int N, int X)
@@ -1859,7 +1859,7 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         
         q = 0;
         
-        // forward propogate
+        // forward propagate
         while ( q < trailing )
         {
             e1 = q;

@@ -28,7 +28,7 @@
  *   The caller should have thought about the memory
  *    allocation, these functions assumes that
  *    everything is OK. If not used with care,
- *   prohibted reads/writes might occur.
+ *   prohibited reads/writes might occur.
  * =================================================
  *
  */
@@ -41,7 +41,7 @@
 #define SHORT_VECTOR    1000
 #endif // _BUILD_FOR_CUDA
 
-// used on contigous vectors
+// used on contigious vectors
 void  vectors_add(numeric_t* A, numeric_t* B, int L)
 {
 #ifdef _BUILD_FOR_CUDA
@@ -107,12 +107,12 @@ void  vectors_add_scalar_multiply(numeric_t* A, numeric_t* B, int L, numeric_t s
     }
 }
 
-void  vectors_substract(numeric_t* A, numeric_t* B, int L)
+void  vectors_subtract(numeric_t* A, numeric_t* B, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
     {
-        if (cudaSuccess == cuda_inplace_vectors_math_op(A, B, L, 0, vector_math_substract))
+        if (cudaSuccess == cuda_inplace_vectors_math_op(A, B, L, 0, vector_math_subtract))
             return;
     }
 #endif // _BUILD_FOR_CUDA
@@ -156,12 +156,12 @@ void  vector_sqrt(numeric_t* A, int L)
 }
 
 // A = A - (B * s)
-void  vectors_substract_scalar_multiply(numeric_t* A, numeric_t* B, int L, numeric_t s)
+void  vectors_subtract_scalar_multiply(numeric_t* A, numeric_t* B, int L, numeric_t s)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
     {
-        if (cudaSuccess == cuda_inplace_vectors_math_op(A, B, L, s, vector_math_substact_scalar_multiply))
+        if (cudaSuccess == cuda_inplace_vectors_math_op(A, B, L, s, vector_math_subtract_scalar_multiply))
             return;
     }
 #endif // _BUILD_FOR_CUDA
@@ -188,7 +188,7 @@ void  vectors_multiply(numeric_t* A, numeric_t* B, int L)
     }
 }
 
-void  vectors_mutliply_scalar(numeric_t* A, numeric_t b, int L)
+void  vectors_multiply_scalar(numeric_t* A, numeric_t b, int L)
 {
 #ifdef _BUILD_FOR_CUDA
     if (L > SHORT_VECTOR)
@@ -382,7 +382,7 @@ void  matrix_set_to_zero(numeric_t** A, int R, int C)
     }
 }
 
-void  matrix_substract(numeric_t** A, numeric_t** B, int R, int C)
+void  matrix_subtract(numeric_t** A, numeric_t** B, int R, int C)
 {
     int r = 0, c = 0;
     
@@ -455,7 +455,7 @@ int   vectors_fit(numeric_t* V, numeric_t limit, int L)
     }
     
     if ( msg && norm != 0.0 )
-        vectors_mutliply_scalar(V, limit / norm, L);
+        vectors_multiply_scalar(V, limit / norm, L);
     
     return msg;
 }

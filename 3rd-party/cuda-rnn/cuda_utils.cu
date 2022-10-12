@@ -1,5 +1,5 @@
 
- #define __CUDACC__
+ #define __CUDACC__ 1
 
 #include <stdio.h>
 #include "cuda_utils.cuh"
@@ -290,7 +290,7 @@ cudaError_t CcudaVectorBlock::cuda_inplace_vectors_math_op(
             addKernel << <grid, BLOCK_SIZE >> > (dev_c, dev_a, dev_b, size);
             break;
 
-        case vector_math_substract :
+        case vector_math_subtract :
             if (NULL == b)
             {
                 fprintf(stderr, "Second vector is required!\r\n");
@@ -331,7 +331,7 @@ cudaError_t CcudaVectorBlock::cuda_inplace_vectors_math_op(
             addMulScalarKernel << <grid, BLOCK_SIZE >> > (dev_c, dev_a, dev_b, dev_s, size);
             break;
 
-        case vector_math_substact_scalar_multiply :
+        case vector_math_subtract_scalar_multiply :
             if (NULL == scalar)
             {
                 fprintf(stderr, "Non-zero scalar is required!\r\n");
