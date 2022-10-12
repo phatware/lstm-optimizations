@@ -15,6 +15,9 @@
 #include <sstream>
 
 // cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
+#define VECTOR_SIZE     1000000
+#define BLOCK_SIZE      1024
+#define TEST_COUNT      5000
 
 using namespace std;
 using namespace std::chrono;
@@ -62,6 +65,21 @@ __global__ void tanhKernel(double* c, const double* a, int size)
         c[i] = tanh(a[i]);
 }
 
+__global__ void tanfKernel(float* c, const float* a, int size)
+{
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < size)
+        c[i] = a[i] / sqrtf(1 + a[i] * a[i]);
+}
+
+__global__ void tanhKernel(float* c, const float* a, int size)
+{
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < size)
+        c[i] = tanhf(a[i]);
+}
+
+#if 0
 inline double tanf(double x)
 {
     return x * sqrt(1.0 + x * x);
@@ -93,10 +111,11 @@ inline double leaky_relu(double x, double a)
     return x * a;
 }
 
-inline double soft(double x)
+inline double softsign(double x)
 {
     return x / (1.0 + abs(x));
 }
+#endif // 0
 
 std::string getEnvVar(std::string const& key)
 {
@@ -106,60 +125,43 @@ std::string getEnvVar(std::string const& key)
     return buff == NULL ? std::string("") : std::string(buff);
 }
 
-
-#define VECTOR_SIZE     1000000
-#define BLOCK_SIZE      1024
-#define TEST_COUNT      1000
-
-int main()
+template<typename T>
+cudaError_t test_performance(double &elapsed1, double& elapsed2,T** data1, T** data2,int &count)
 {
     Timer tmr;
     cudaError_t cudaStatus;
-    double* vector = NULL;
-    double* result = NULL;
+    T* vector = NULL;
+    T* result = NULL;
+    elapsed1 = 0;
+    elapsed2 = 0;
 
-    srand(42);
-
-    // Choose which GPU to run on, change this on a multi-GPU system.
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) 
-    {
-        cerr << "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?" << endl;
-        return -1;
-    }
-
-    cudaStatus = cudaMalloc((void**)&vector, VECTOR_SIZE * sizeof(double));
+    cudaStatus = cudaMalloc((void**)&vector, VECTOR_SIZE * sizeof(T));
     if (cudaStatus != cudaSuccess)
     {
-        fprintf(stderr, "cudaMalloc failed!");
-        return -1;
+        return cudaStatus;
     }
 
-    cudaStatus = cudaMalloc((void**)&result, VECTOR_SIZE * sizeof(double));
+    cudaStatus = cudaMalloc((void**)&result, VECTOR_SIZE * sizeof(T));
     if (cudaStatus != cudaSuccess)
     {
-        fprintf(stderr, "cudaMalloc failed!");
-        return -1;
+        cudaFree(vector);
+        return cudaStatus;
     }
 
     cout << "Initializing vector, please wait..." << endl;
 
-    int count = 0;
-    for (double d = -20.0; d < 20.0; d += 0.0001)
+    count = 0;
+    for (T d = -10.0f; d < 10.0f; d += 0.00002f)
     {
-        cudaMemcpy(&vector[count], &d, sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(&vector[count], &d, sizeof(T), cudaMemcpyHostToDevice);
         count++;
+        if (count >= VECTOR_SIZE)
+            break;
     }
-
-    cout << "Vector size " << count << "  Testing... " << endl;
-
-    double elapsed1 = 0;
-    double elapsed2 = 0;
-    double* data1 = NULL;
-    double* data2 = NULL;
-
     dim3 block(BLOCK_SIZE);
     dim3 grid((count / block.x) + 1);
+
+    cout << "Vector size " << count << "  Testing... " << endl << flush;
 
     for (int i = 0; i < TEST_COUNT; i++)
     {
@@ -171,21 +173,20 @@ int main()
         cudaStatus = cudaGetLastError();
         if (cudaStatus != cudaSuccess)
         {
-            fprintf(stderr, "addKernel launch failed: %s\r\n", cudaGetErrorString(cudaStatus));
-            return -1;
+            goto error;
         }
         cudaStatus = cudaDeviceSynchronize();
         if (cudaStatus != cudaSuccess)
         {
-            fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\r\n", cudaStatus);
-            return -1;
+            goto error;
         }
         elapsed1 += tmr.elapsed();
 
-        if (NULL == data1)
+        if (NULL != data1 && NULL == *data1)
         {
-            data1 = new double[count];
-            cudaMemcpy(data1, result, count * sizeof(double), cudaMemcpyDeviceToHost);
+            *data1 = new T[count];
+            cudaMemcpy(*data1, result, count * sizeof(T), cudaMemcpyDeviceToHost);
+            cudaMemset(result, 0, VECTOR_SIZE * sizeof(T));
         }
         // TANH
         tmr.reset();
@@ -195,8 +196,7 @@ int main()
         cudaStatus = cudaGetLastError();
         if (cudaStatus != cudaSuccess)
         {
-            fprintf(stderr, "addKernel launch failed: %s\r\n", cudaGetErrorString(cudaStatus));
-            return -1;
+            goto error;
         }
 
         // cudaDeviceSynchronize waits for the kernel to finish, and returns
@@ -204,19 +204,61 @@ int main()
         cudaStatus = cudaDeviceSynchronize();
         if (cudaStatus != cudaSuccess)
         {
-            fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\r\n", cudaStatus);
-            return -1;
+            goto error;
         }
         elapsed2 += tmr.elapsed();
- 
-        if (NULL == data2)
+
+        if (NULL != data2 && NULL == *data2)
         {
-            data2 = new double[count];
-            cudaMemcpy(data2, result, count * sizeof(double), cudaMemcpyDeviceToHost);
+            *data2 = new T[count];
+            cudaStatus = cudaMemcpy(*data2, result, count * sizeof(T), cudaMemcpyDeviceToHost);
+            cudaMemset(result, 0, VECTOR_SIZE * sizeof(T));
         }
     }
+error:
+    cudaFree(result);
+    cudaFree(vector);
+    return cudaStatus;
+}
 
-    cout << elapsed1 / TEST_COUNT << " vs " << elapsed2 / TEST_COUNT << endl;
+int main()
+{
+    cudaError_t cudaStatus;
+    double* ddata1 = NULL;
+    double* ddata2 = NULL;
+    float * fdata1 = NULL;
+    float * fdata2 = NULL;
+    double  elapsed1 = 0;
+    double  elapsed2 = 0;
+    int count = 0;
+
+    srand(42);
+
+    // Choose which GPU to run on, change this on a multi-GPU system.
+    cudaStatus = cudaSetDevice(0);
+    if (cudaStatus != cudaSuccess) 
+    {
+        cerr << "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?" << endl;
+        return -1;
+    }
+
+    cout << "Testing single precision (float)" << endl << endl << flush;
+    cudaStatus = test_performance<float>(elapsed1, elapsed2, &fdata1, &fdata2, count);
+    if (cudaStatus != cudaSuccess)
+    {
+        cerr << "CUDA failed: " << cudaGetErrorString(cudaStatus) << endl;
+        return -1;
+    }
+    cout << "float tanf: " << elapsed1 / TEST_COUNT << " vs tanh: " << elapsed2 / TEST_COUNT << endl;
+
+    cout << endl << "Testing double precision (double)" << endl << endl << flush;
+    cudaStatus = test_performance<double>(elapsed1, elapsed2, &ddata1, &ddata2, count);
+    if (cudaStatus != cudaSuccess)
+    {
+        cerr << "CUDA failed: " << cudaGetErrorString(cudaStatus) << endl;
+        return -1;
+    }
+    cout << "double tanf: " << elapsed1 / TEST_COUNT << " vs tanh: " << elapsed2 / TEST_COUNT << endl;
 
     std::ofstream fout;
     std::stringstream sstr;
@@ -244,17 +286,17 @@ int main()
 #endif // WIN
 
     fout.open(sstr.str());
-    fout << "func1,func2\n";
+    fout << "dtanf,dtanh,ftanf,ftanh\n";
     for (int i = 0; i < count; i++)
     {
-        fout << data1[i] << "," << data2[i] << "\n";
+        fout << ddata1[i] << "," << ddata2[i] << "," << fdata1[i] << "," << fdata2[i] << "\n";
     }
     fout.close();
 
     cudaStatus = cudaDeviceReset();
     if (cudaStatus != cudaSuccess) 
     {
-        fprintf(stderr, "cudaDeviceReset failed!");
+        cerr << "cudaDeviceReset failed!" << endl;
         return -1;
     }
     return 0;
