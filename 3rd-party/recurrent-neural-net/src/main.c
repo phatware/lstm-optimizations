@@ -79,6 +79,7 @@ void usage(char *argv[]) {
     printf("    -c  : Don't train, only generate output. Seed given by the value. If -r is used, datafile is not considered.\r\n");
     printf("    -s  : Save folder, where models are stored (binary and JSON).\r\n");
     printf("    -tf : Use tanf() instead of tanh()\r\n");
+    printf("    -pn : Progress file name. default is progress.csv\r\n");
 //    printf("    -td : When using tanf(), use simplified derivative in back propagation (drop power of 3/2)\r\n");
     printf("\r\n");
     printf("Check std_conf.h to see what default values are used, these are set during compilation.\r\n");
@@ -215,6 +216,10 @@ static void parse_input_args(int argc, char** argv)
         else if ( !strcmp(argv[a], "-c") )
         {
             seed = argv[a+1];
+        }
+        else if ( !strcmp(argv[a], "-pn") )
+        {
+            params.store_progress_file_name = argv[a+1];
         }
         a += 2;
     }
