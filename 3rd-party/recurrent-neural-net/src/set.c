@@ -69,8 +69,8 @@ int set_char_to_indx(set_t* set, char c)
 
 int set_probability_choice(set_t* set, numeric_t* probs)
 {
-    numeric_t sum = 0, random_value;
-    random_value = _randf;
+    numeric_t sum = 0;
+    numeric_t random_value = _randf;
     
     for (int i = 0; i < SET_MAX_CHARS; i++)
     {

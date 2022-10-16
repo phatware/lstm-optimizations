@@ -329,7 +329,7 @@ int rnn_main(int argc, char *argv[])
     
     fp = fopen(argv[1], "r");
     while ( ( c = fgetc(fp) ) != EOF )
-        X_train[sz++] = set_char_to_indx(&set,c);
+        X_train[sz++] = set_char_to_indx(&set, c);
     fclose(fp);
  
     if (params.store_progress_every_x_iterations > 0)
@@ -386,8 +386,7 @@ int rnn_main(int argc, char *argv[])
                                   FReadNewAfterDataFile
                                   );
                 
-            }
-            
+            }            
         }
         
         if ( seed == NULL )
@@ -419,20 +418,24 @@ int rnn_main(int argc, char *argv[])
             }
             else
             {
-                if ( p == 0 ) {
+                if ( p == 0 )
+                {
                     Y = set_get_features(&set);
                     X = params.neurons;
-                } else if ( p == params.layers - 1 ) {
+                }
+                else if ( p == params.layers - 1 )
+                {
                     Y = params.neurons;
                     X = set_get_features(&set);
-                } else {
+                }
+                else
+                {
                     Y = params.neurons;
                     X = params.neurons;
                 }
             }
             
-            lstm_init_model(X, N, Y, &model_layers[p], 0, &params);
-            
+            lstm_init_model(X, N, Y, &model_layers[p], 0, &params);            
             ++p;
         }
     }

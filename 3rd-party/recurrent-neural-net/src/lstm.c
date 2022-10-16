@@ -256,13 +256,7 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     
     numeric_t beta1t = 1.0 / ( 1.0 - pow(beta1, t+1));
     numeric_t beta2t = 1.0 / ( 1.0 - pow(beta2, t+1));
-    
-    if ( !(beta2t == beta2t) )
-    {
-        printf("beta2t: %f\n", beta2t);
-        exit(0);
-    }
-        
+            
     vectors_copy_multiply_scalar(gradients->Wym, gradients->Wy, 1.0 - beta1, model->Y * model->N);
     vectors_copy_multiply_scalar(gradients->Wim, gradients->Wi, 1.0 - beta1, model->N * model->S);
     vectors_copy_multiply_scalar(gradients->Wcm, gradients->Wc, 1.0 - beta1, model->N * model->S);
@@ -454,6 +448,7 @@ void gradients_decend(lstm_model_t* model, lstm_model_t* gradients)
     vectors_multiply_scalar(gradients->bym, model->params->momentum, model->Y);
     vectors_multiply_scalar(gradients->bim, model->params->momentum, model->N);
     vectors_multiply_scalar(gradients->bcm, model->params->momentum, model->N);
+
     vectors_multiply_scalar(gradients->bom, model->params->momentum, model->N);
     vectors_multiply_scalar(gradients->bfm, model->params->momentum, model->N);
     
@@ -1097,8 +1092,7 @@ void lstm_store(const char *path, set_t *set,
     fclose(fp);
 }
 
-int lstm_reinit_model(
-                      lstm_model_t** model, unsigned int layers,
+int lstm_reinit_model(lstm_model_t** model, unsigned int layers,
                       unsigned int previousNbrFeatures, unsigned int newNbrFeatures)
 {
     /* Expand last and first layer, add newNbrFeatures - previousNbrFeatures
@@ -1394,8 +1388,7 @@ void lstm_output_string_layers(lstm_model_t ** model_layers, set_t* char_index_m
         b = 0;
         while ( b < 2 )
         {
-            caches_layer[p][b] = lstm_cache_container_init(
-                                                           model_layers[p]->X, model_layers[p]->N, model_layers[p]->Y);
+            caches_layer[p][b] = lstm_cache_container_init(model_layers[p]->X, model_layers[p]->N, model_layers[p]->Y);
             ++b;
         }
         ++p;
@@ -1499,8 +1492,7 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
         
         i = 0;
         while ( i < 2 ) {
-            caches_layers[p][i] = lstm_cache_container_init(
-                                                            model_layers[p]->X, model_layers[0]->N, model_layers[0]->Y);
+            caches_layers[p][i] = lstm_cache_container_init(model_layers[p]->X, model_layers[0]->N, model_layers[0]->Y);
             ++i;
         }
         
@@ -1700,8 +1692,7 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         p = 0;
         while ( p < params->mini_batch_size + 1 )
         {
-            cache_layers[i][p] = lstm_cache_container_init(
-                                                           model_layers[i]->X, model_layers[i]->N, model_layers[i]->Y);
+            cache_layers[i][p] = lstm_cache_container_init(model_layers[i]->X, model_layers[i]->N, model_layers[i]->Y);
             if ( cache_layers[i][p] == NULL )
                 lstm_init_fail("Failed to allocate memory for the caches\n");
             ++p;
