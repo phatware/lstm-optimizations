@@ -54,13 +54,15 @@
 #include "layers.h"
 #include "assert.h"
 
-#define OPTIMIZE_ADAM                         0
-#define OPTIMIZE_GRADIENT_DESCENT             1
+#define OPTIMIZE_ADAM                       0
+#define OPTIMIZE_GRADIENT_DESCENT           1
 
-#define LSTM_MAX_LAYERS                       10
-#define LSTM_MAX_NEURONS                      300
+#define LSTM_MAX_LAYERS                     10
+#define LSTM_MAX_NEURONS                    300
 
-#define BINARY_FILE_VERSION                   1
+#define BINARY_FILE_VERSION                 1
+
+#define EPSILON                             1e-7
 
 typedef struct lstm_model_parameters_t
 {
@@ -108,8 +110,18 @@ typedef struct lstm_model_parameters_t
     unsigned long epochs;
     
     int use_tanf;           // use tanf()
-    int true_der;           // use true derivative of tanf()
+    int use_threads;        // use multiple threads
 } lstm_model_parameters_t;
+
+typedef enum  lstm_model_wb
+{
+    LSTM_WB_F = 0,
+    LSTM_WB_I,
+    LSTM_WB_C,
+    LSTM_WB_O,
+    LSTM_WB_Y,
+    LSTM_PARAMTERS
+} lstm_model_wb_t;
 
 typedef struct lstm_model_t
 {
@@ -122,16 +134,23 @@ typedef struct lstm_model_t
     lstm_model_parameters_t * params;
     
     // The model
-    numeric_t* Wf;
-    numeric_t* Wi;
-    numeric_t* Wc;
-    numeric_t* Wo;
-    numeric_t* Wy;
-    numeric_t* bf;
-    numeric_t* bi;
-    numeric_t* bc;
-    numeric_t* bo;
-    numeric_t* by;
+    numeric_t* W[LSTM_PARAMTERS];
+    numeric_t* b[LSTM_PARAMTERS];
+
+    numeric_t* Wm[LSTM_PARAMTERS];
+    numeric_t* bm[LSTM_PARAMTERS];
+
+//    numeric_t* Wf;
+//    numeric_t* Wi;
+//    numeric_t* Wc;
+//    numeric_t* Wo;
+//    numeric_t* Wy;
+//
+//    numeric_t* bf;
+//    numeric_t* bi;
+//    numeric_t* bc;
+//    numeric_t* bo;
+//    numeric_t* by;
     
     // cache
     numeric_t* dldh;
@@ -147,16 +166,17 @@ typedef struct lstm_model_t
     numeric_t* dldXc;
     
     // Gradient descent momentum
-    numeric_t* Wfm;
-    numeric_t* Wim;
-    numeric_t* Wcm;
-    numeric_t* Wom;
-    numeric_t* Wym;
-    numeric_t* bfm;
-    numeric_t* bim;
-    numeric_t* bcm;
-    numeric_t* bom;
-    numeric_t* bym;
+//    numeric_t* Wfm;
+//    numeric_t* Wim;
+//    numeric_t* Wcm;
+//    numeric_t* Wom;
+//    numeric_t* Wym;
+//
+//    numeric_t* bfm;
+//    numeric_t* bim;
+//    numeric_t* bcm;
+//    numeric_t* bom;
+//    numeric_t* bym;
         
 } lstm_model_t;
 
@@ -221,7 +241,6 @@ void lstm_free_model(lstm_model_t *lstm);
  */
 void lstm_forward_propagate(lstm_model_t *model, numeric_t *input,
                             lstm_values_cache_t *cache_in, lstm_values_cache_t *cache_out, int softmax);
-void lstm_backward_propagate(lstm_model_t*, numeric_t*, int, lstm_values_next_cache_t*, lstm_values_cache_t*, lstm_model_t*, lstm_values_next_cache_t*);
 
 void lstm_values_state_init(lstm_values_state_t** d_next_to_set, int N);
 void lstm_values_next_state_free(lstm_values_state_t* d_next);
@@ -270,7 +289,7 @@ int lstm_reinit_model(
  */
 void lstm_store_net_layers_as_json(lstm_model_t** model, const char * filename,
                                    const char *set_name, set_t *set, unsigned int layers);
-void lstm_store_progress(const char*, unsigned int, unsigned int, numeric_t, const char *);
+void lstm_store_progress(const char*, unsigned int, unsigned int, numeric_t, const char *, const char *, unsigned int, unsigned int);
 
 /**
  * This is the entry point to the realm of black magic.
@@ -340,5 +359,8 @@ void lstm_output_string_layers_to_file(FILE * fp,lstm_model_t ** model_layers,
 
 void lstm_read_net_layers(lstm_model_t** model, FILE *fp, unsigned int layers);
 void lstm_store_net_layers(lstm_model_t** model, FILE *fp, unsigned int layers);
+
+void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm_model_t* M, lstm_model_t* R, unsigned int t);
+
 #endif
 

@@ -23,6 +23,7 @@
 
 #include "lstm.h"
 #include <time.h>
+#include <pthread.h>
 
 #ifdef _WIN32
 #include <stdio.h>
@@ -30,6 +31,7 @@
 
 double total_fw_time = 0;
 double total_bw_time = 0;
+double total_adam_time = 0;
 
 void lstm_init_fail(const char * msg)
 {
@@ -54,26 +56,26 @@ int lstm_init_model(int X, int N, int Y,
     
     if ( zeros ) 
     {
-        lstm->Wf = get_zero_vector(N * S);
-        lstm->Wi = get_zero_vector(N * S);
-        lstm->Wc = get_zero_vector(N * S);
-        lstm->Wo = get_zero_vector(N * S);
-        lstm->Wy = get_zero_vector(Y * N);
+        lstm->W[LSTM_WB_F] = get_zero_vector(N * S);
+        lstm->W[LSTM_WB_I] = get_zero_vector(N * S);
+        lstm->W[LSTM_WB_C] = get_zero_vector(N * S);
+        lstm->W[LSTM_WB_O] = get_zero_vector(N * S);
+        lstm->W[LSTM_WB_Y] = get_zero_vector(Y * N);
     }
     else 
     {
-        lstm->Wf = get_random_vector(N * S, S);
-        lstm->Wi = get_random_vector(N * S, S);
-        lstm->Wc = get_random_vector(N * S, S);
-        lstm->Wo = get_random_vector(N * S, S);
-        lstm->Wy = get_random_vector(Y * N, N);
+        lstm->W[LSTM_WB_F] = get_random_vector(N * S, S);
+        lstm->W[LSTM_WB_I] = get_random_vector(N * S, S);
+        lstm->W[LSTM_WB_C] = get_random_vector(N * S, S);
+        lstm->W[LSTM_WB_O] = get_random_vector(N * S, S);
+        lstm->W[LSTM_WB_Y] = get_random_vector(Y * N, N);
     }
     
-    lstm->bf = get_zero_vector(N);
-    lstm->bi = get_zero_vector(N);
-    lstm->bc = get_zero_vector(N);
-    lstm->bo = get_zero_vector(N);
-    lstm->by = get_zero_vector(Y);
+    lstm->b[LSTM_WB_F] = get_zero_vector(N);
+    lstm->b[LSTM_WB_I] = get_zero_vector(N);
+    lstm->b[LSTM_WB_C] = get_zero_vector(N);
+    lstm->b[LSTM_WB_O] = get_zero_vector(N);
+    lstm->b[LSTM_WB_Y] = get_zero_vector(Y);
     
     lstm->dldhf = get_zero_vector(N);
     lstm->dldhi = get_zero_vector(N);
@@ -88,17 +90,17 @@ int lstm_init_model(int X, int N, int Y,
     lstm->dldXf = get_zero_vector(S);
     
     // Gradient descent momentum caches
-    lstm->Wfm = get_zero_vector(N * S);
-    lstm->Wim = get_zero_vector(N * S);
-    lstm->Wcm = get_zero_vector(N * S);
-    lstm->Wom = get_zero_vector(N * S);
-    lstm->Wym = get_zero_vector(Y * N);
+    lstm->Wm[LSTM_WB_F] = get_zero_vector(N * S);
+    lstm->Wm[LSTM_WB_I] = get_zero_vector(N * S);
+    lstm->Wm[LSTM_WB_C] = get_zero_vector(N * S);
+    lstm->Wm[LSTM_WB_O] = get_zero_vector(N * S);
+    lstm->Wm[LSTM_WB_Y] = get_zero_vector(Y * N);
     
-    lstm->bfm = get_zero_vector(N);
-    lstm->bim = get_zero_vector(N);
-    lstm->bcm = get_zero_vector(N);
-    lstm->bom = get_zero_vector(N);
-    lstm->bym = get_zero_vector(Y);
+    lstm->bm[LSTM_WB_F] = get_zero_vector(N);
+    lstm->bm[LSTM_WB_I] = get_zero_vector(N);
+    lstm->bm[LSTM_WB_C] = get_zero_vector(N);
+    lstm->bm[LSTM_WB_O] = get_zero_vector(N);
+    lstm->bm[LSTM_WB_Y] = get_zero_vector(Y);
     
     *model_to_be_set = lstm;
     
@@ -107,17 +109,17 @@ int lstm_init_model(int X, int N, int Y,
 //                     lstm model to be freed
 void lstm_free_model(lstm_model_t* lstm)
 {
-    free_vector(&lstm->Wf);
-    free_vector(&lstm->Wi);
-    free_vector(&lstm->Wc);
-    free_vector(&lstm->Wo);
-    free_vector(&lstm->Wy);
+    free_vector(&lstm->W[LSTM_WB_F]);
+    free_vector(&lstm->W[LSTM_WB_I]);
+    free_vector(&lstm->W[LSTM_WB_C]);
+    free_vector(&lstm->W[LSTM_WB_O]);
+    free_vector(&lstm->W[LSTM_WB_Y]);
     
-    free_vector(&lstm->bf);
-    free_vector(&lstm->bi);
-    free_vector(&lstm->bc);
-    free_vector(&lstm->bo);
-    free_vector(&lstm->by);
+    free_vector(&lstm->b[LSTM_WB_F]);
+    free_vector(&lstm->b[LSTM_WB_I]);
+    free_vector(&lstm->b[LSTM_WB_C]);
+    free_vector(&lstm->b[LSTM_WB_O]);
+    free_vector(&lstm->b[LSTM_WB_Y]);
     
     free_vector(&lstm->dldhf);
     free_vector(&lstm->dldhi);
@@ -131,17 +133,17 @@ void lstm_free_model(lstm_model_t* lstm)
     free_vector(&lstm->dldXi);
     free_vector(&lstm->dldXf);
     
-    free_vector(&lstm->Wfm);
-    free_vector(&lstm->Wim);
-    free_vector(&lstm->Wcm);
-    free_vector(&lstm->Wom);
-    free_vector(&lstm->Wym);
+    free_vector(&lstm->Wm[LSTM_WB_F]);
+    free_vector(&lstm->Wm[LSTM_WB_I]);
+    free_vector(&lstm->Wm[LSTM_WB_C]);
+    free_vector(&lstm->Wm[LSTM_WB_O]);
+    free_vector(&lstm->Wm[LSTM_WB_Y]);
     
-    free_vector(&lstm->bfm);
-    free_vector(&lstm->bim);
-    free_vector(&lstm->bcm);
-    free_vector(&lstm->bom);
-    free_vector(&lstm->bym);
+    free_vector(&lstm->bm[LSTM_WB_F]);
+    free_vector(&lstm->bm[LSTM_WB_I]);
+    free_vector(&lstm->bm[LSTM_WB_C]);
+    free_vector(&lstm->bm[LSTM_WB_O]);
+    free_vector(&lstm->bm[LSTM_WB_Y]);
     
     free(lstm);
 }
@@ -197,17 +199,17 @@ void lstm_values_state_init(lstm_values_state_t** d_next_to_set, int N)
 int gradients_fit(lstm_model_t* gradients, numeric_t limit)
 {
     int msg = 0;
-    msg += vectors_fit(gradients->Wy, limit, gradients->Y * gradients->N);
-    msg += vectors_fit(gradients->Wi, limit, gradients->N * gradients->S);
-    msg += vectors_fit(gradients->Wc, limit, gradients->N * gradients->S);
-    msg += vectors_fit(gradients->Wo, limit, gradients->N * gradients->S);
-    msg += vectors_fit(gradients->Wf, limit, gradients->N * gradients->S);
+    msg += vectors_fit(gradients->W[LSTM_WB_Y], limit, gradients->Y * gradients->N);
+    msg += vectors_fit(gradients->W[LSTM_WB_I], limit, gradients->N * gradients->S);
+    msg += vectors_fit(gradients->W[LSTM_WB_C], limit, gradients->N * gradients->S);
+    msg += vectors_fit(gradients->W[LSTM_WB_O], limit, gradients->N * gradients->S);
+    msg += vectors_fit(gradients->W[LSTM_WB_F], limit, gradients->N * gradients->S);
     
-    msg += vectors_fit(gradients->by, limit, gradients->Y);
-    msg += vectors_fit(gradients->bi, limit, gradients->N);
-    msg += vectors_fit(gradients->bc, limit, gradients->N);
-    msg += vectors_fit(gradients->bf, limit, gradients->N);
-    msg += vectors_fit(gradients->bo, limit, gradients->N);
+    msg += vectors_fit(gradients->b[LSTM_WB_Y], limit, gradients->Y);
+    msg += vectors_fit(gradients->b[LSTM_WB_I], limit, gradients->N);
+    msg += vectors_fit(gradients->b[LSTM_WB_C], limit, gradients->N);
+    msg += vectors_fit(gradients->b[LSTM_WB_F], limit, gradients->N);
+    msg += vectors_fit(gradients->b[LSTM_WB_O], limit, gradients->N);
     
     return msg;
 }
@@ -215,34 +217,34 @@ int gradients_fit(lstm_model_t* gradients, numeric_t limit)
 int gradients_clip(lstm_model_t* gradients, numeric_t limit)
 {
     int msg = 0;
-    msg += vectors_clip(gradients->Wy, limit, gradients->Y * gradients->N);
-    msg += vectors_clip(gradients->Wi, limit, gradients->N * gradients->S);
-    msg += vectors_clip(gradients->Wc, limit, gradients->N * gradients->S);
-    msg += vectors_clip(gradients->Wo, limit, gradients->N * gradients->S);
-    msg += vectors_clip(gradients->Wf, limit, gradients->N * gradients->S);
+    msg += vectors_clip(gradients->W[LSTM_WB_Y], limit, gradients->Y * gradients->N);
+    msg += vectors_clip(gradients->W[LSTM_WB_I], limit, gradients->N * gradients->S);
+    msg += vectors_clip(gradients->W[LSTM_WB_C], limit, gradients->N * gradients->S);
+    msg += vectors_clip(gradients->W[LSTM_WB_O], limit, gradients->N * gradients->S);
+    msg += vectors_clip(gradients->W[LSTM_WB_F], limit, gradients->N * gradients->S);
     
-    msg += vectors_clip(gradients->by, limit, gradients->Y);
-    msg += vectors_clip(gradients->bi, limit, gradients->N);
-    msg += vectors_clip(gradients->bc, limit, gradients->N);
-    msg += vectors_clip(gradients->bf, limit, gradients->N);
-    msg += vectors_clip(gradients->bo, limit, gradients->N);
+    msg += vectors_clip(gradients->b[LSTM_WB_Y], limit, gradients->Y);
+    msg += vectors_clip(gradients->b[LSTM_WB_I], limit, gradients->N);
+    msg += vectors_clip(gradients->b[LSTM_WB_C], limit, gradients->N);
+    msg += vectors_clip(gradients->b[LSTM_WB_F], limit, gradients->N);
+    msg += vectors_clip(gradients->b[LSTM_WB_O], limit, gradients->N);
     
     return msg;
 }
 
 void sum_gradients(lstm_model_t* gradients, lstm_model_t* gradients_entry)
 {
-    vectors_add(gradients->Wy, gradients_entry->Wy, gradients->Y * gradients->N);
-    vectors_add(gradients->Wi, gradients_entry->Wi, gradients->N * gradients->S);
-    vectors_add(gradients->Wc, gradients_entry->Wc, gradients->N * gradients->S);
-    vectors_add(gradients->Wo, gradients_entry->Wo, gradients->N * gradients->S);
-    vectors_add(gradients->Wf, gradients_entry->Wf, gradients->N * gradients->S);
+    vectors_add(gradients->W[LSTM_WB_Y], gradients_entry->W[LSTM_WB_Y], gradients->Y * gradients->N);
+    vectors_add(gradients->W[LSTM_WB_I], gradients_entry->W[LSTM_WB_I], gradients->N * gradients->S);
+    vectors_add(gradients->W[LSTM_WB_C], gradients_entry->W[LSTM_WB_C], gradients->N * gradients->S);
+    vectors_add(gradients->W[LSTM_WB_O], gradients_entry->W[LSTM_WB_O], gradients->N * gradients->S);
+    vectors_add(gradients->W[LSTM_WB_F], gradients_entry->W[LSTM_WB_F], gradients->N * gradients->S);
     
-    vectors_add(gradients->by, gradients_entry->by, gradients->Y);
-    vectors_add(gradients->bi, gradients_entry->bi, gradients->N);
-    vectors_add(gradients->bc, gradients_entry->bc, gradients->N);
-    vectors_add(gradients->bf, gradients_entry->bf, gradients->N);
-    vectors_add(gradients->bo, gradients_entry->bo, gradients->N);
+    vectors_add(gradients->b[LSTM_WB_Y], gradients_entry->b[LSTM_WB_Y], gradients->Y);
+    vectors_add(gradients->b[LSTM_WB_I], gradients_entry->b[LSTM_WB_I], gradients->N);
+    vectors_add(gradients->b[LSTM_WB_C], gradients_entry->b[LSTM_WB_C], gradients->N);
+    vectors_add(gradients->b[LSTM_WB_F], gradients_entry->b[LSTM_WB_F], gradients->N);
+    vectors_add(gradients->b[LSTM_WB_O], gradients_entry->b[LSTM_WB_O], gradients->N);
 }
 
 // A -= alpha * Am_hat / (np.sqrt(Rm_hat) + epsilon)
@@ -257,226 +259,226 @@ void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm
     numeric_t beta1t = 1.0 / ( 1.0 - pow(beta1, t+1));
     numeric_t beta2t = 1.0 / ( 1.0 - pow(beta2, t+1));
             
-    vectors_copy_multiply_scalar(gradients->Wym, gradients->Wy, 1.0 - beta1, model->Y * model->N);
-    vectors_copy_multiply_scalar(gradients->Wim, gradients->Wi, 1.0 - beta1, model->N * model->S);
-    vectors_copy_multiply_scalar(gradients->Wcm, gradients->Wc, 1.0 - beta1, model->N * model->S);
-    vectors_copy_multiply_scalar(gradients->Wom, gradients->Wo, 1.0 - beta1, model->N * model->S);
-    vectors_copy_multiply_scalar(gradients->Wfm, gradients->Wf, 1.0 - beta1, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_Y], gradients->W[LSTM_WB_Y], 1.0 - beta1, model->Y * model->N);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_I], gradients->W[LSTM_WB_I], 1.0 - beta1, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_C], gradients->W[LSTM_WB_C], 1.0 - beta1, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_O], gradients->W[LSTM_WB_O], 1.0 - beta1, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_F], gradients->W[LSTM_WB_F], 1.0 - beta1, model->N * model->S);
     
-    vectors_copy_multiply_scalar(gradients->bym, gradients->by, 1.0 - beta1, model->Y);
-    vectors_copy_multiply_scalar(gradients->bim, gradients->bi, 1.0 - beta1, model->N);
-    vectors_copy_multiply_scalar(gradients->bcm, gradients->bc, 1.0 - beta1, model->N);
-    vectors_copy_multiply_scalar(gradients->bom, gradients->bo, 1.0 - beta1, model->N);
-    vectors_copy_multiply_scalar(gradients->bfm, gradients->bf, 1.0 - beta1, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_Y], gradients->b[LSTM_WB_Y], 1.0 - beta1, model->Y);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_I], gradients->b[LSTM_WB_I], 1.0 - beta1, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_C], gradients->b[LSTM_WB_C], 1.0 - beta1, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_O], gradients->b[LSTM_WB_O], 1.0 - beta1, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_F], gradients->b[LSTM_WB_F], 1.0 - beta1, model->N);
     
-    vectors_multiply_scalar(M->Wy, beta1, model->Y * model->N);
-    vectors_multiply_scalar(M->Wi, beta1, model->N * model->S);
-    vectors_multiply_scalar(M->Wc, beta1, model->N * model->S);
-    vectors_multiply_scalar(M->Wo, beta1, model->N * model->S);
-    vectors_multiply_scalar(M->Wf, beta1, model->N * model->S);
+    vectors_multiply_scalar(M->W[LSTM_WB_Y], beta1, model->Y * model->N);
+    vectors_multiply_scalar(M->W[LSTM_WB_I], beta1, model->N * model->S);
+    vectors_multiply_scalar(M->W[LSTM_WB_C], beta1, model->N * model->S);
+    vectors_multiply_scalar(M->W[LSTM_WB_O], beta1, model->N * model->S);
+    vectors_multiply_scalar(M->W[LSTM_WB_F], beta1, model->N * model->S);
     
-    vectors_multiply_scalar(M->by, beta1, model->Y);
-    vectors_multiply_scalar(M->bi, beta1, model->N);
-    vectors_multiply_scalar(M->bc, beta1, model->N);
-    vectors_multiply_scalar(M->bo, beta1, model->N);
-    vectors_multiply_scalar(M->bf, beta1, model->N);
+    vectors_multiply_scalar(M->b[LSTM_WB_Y], beta1, model->Y);
+    vectors_multiply_scalar(M->b[LSTM_WB_I], beta1, model->N);
+    vectors_multiply_scalar(M->b[LSTM_WB_C], beta1, model->N);
+    vectors_multiply_scalar(M->b[LSTM_WB_O], beta1, model->N);
+    vectors_multiply_scalar(M->b[LSTM_WB_F], beta1, model->N);
     
-    vectors_add(M->Wy, gradients->Wy, model->Y * model->N);
-    vectors_add(M->Wi, gradients->Wi, model->N * model->S);
-    vectors_add(M->Wc, gradients->Wc, model->N * model->S);
-    vectors_add(M->Wo, gradients->Wo, model->N * model->S);
-    vectors_add(M->Wf, gradients->Wf, model->N * model->S);
+    vectors_add(M->W[LSTM_WB_Y], gradients->W[LSTM_WB_Y], model->Y * model->N);
+    vectors_add(M->W[LSTM_WB_I], gradients->W[LSTM_WB_I], model->N * model->S);
+    vectors_add(M->W[LSTM_WB_C], gradients->W[LSTM_WB_C], model->N * model->S);
+    vectors_add(M->W[LSTM_WB_O], gradients->W[LSTM_WB_O], model->N * model->S);
+    vectors_add(M->W[LSTM_WB_F], gradients->W[LSTM_WB_F], model->N * model->S);
     
-    vectors_add(M->by, gradients->by, model->Y);
-    vectors_add(M->bi, gradients->bi, model->N);
-    vectors_add(M->bc, gradients->bc, model->N);
-    vectors_add(M->bo, gradients->bo, model->N);
-    vectors_add(M->bf, gradients->bf, model->N);
+    vectors_add(M->b[LSTM_WB_Y], gradients->b[LSTM_WB_Y], model->Y);
+    vectors_add(M->b[LSTM_WB_I], gradients->b[LSTM_WB_I], model->N);
+    vectors_add(M->b[LSTM_WB_C], gradients->b[LSTM_WB_C], model->N);
+    vectors_add(M->b[LSTM_WB_O], gradients->b[LSTM_WB_O], model->N);
+    vectors_add(M->b[LSTM_WB_F], gradients->b[LSTM_WB_F], model->N);
     
     // M Done!
     // Computing R
     
-    vectors_multiply(gradients->Wy, gradients->Wy, model->Y * model->N);
-    vectors_multiply(gradients->Wi, gradients->Wi, model->N * model->S);
-    vectors_multiply(gradients->Wc, gradients->Wc, model->N * model->S);
-    vectors_multiply(gradients->Wo, gradients->Wo, model->N * model->S);
-    vectors_multiply(gradients->Wf, gradients->Wf, model->N * model->S);
+    vectors_multiply(gradients->W[LSTM_WB_Y], gradients->W[LSTM_WB_Y], model->Y * model->N);
+    vectors_multiply(gradients->W[LSTM_WB_I], gradients->W[LSTM_WB_I], model->N * model->S);
+    vectors_multiply(gradients->W[LSTM_WB_C], gradients->W[LSTM_WB_C], model->N * model->S);
+    vectors_multiply(gradients->W[LSTM_WB_O], gradients->W[LSTM_WB_O], model->N * model->S);
+    vectors_multiply(gradients->W[LSTM_WB_F], gradients->W[LSTM_WB_F], model->N * model->S);
     
-    vectors_multiply(gradients->by, gradients->by, model->Y );
-    vectors_multiply(gradients->bi, gradients->bi, model->N );
-    vectors_multiply(gradients->bc, gradients->bc, model->N );
-    vectors_multiply(gradients->bo, gradients->bo, model->N );
-    vectors_multiply(gradients->bf, gradients->bf, model->N );
+    vectors_multiply(gradients->b[LSTM_WB_Y], gradients->b[LSTM_WB_Y], model->Y );
+    vectors_multiply(gradients->b[LSTM_WB_I], gradients->b[LSTM_WB_I], model->N );
+    vectors_multiply(gradients->b[LSTM_WB_C], gradients->b[LSTM_WB_C], model->N );
+    vectors_multiply(gradients->b[LSTM_WB_O], gradients->b[LSTM_WB_O], model->N );
+    vectors_multiply(gradients->b[LSTM_WB_F], gradients->b[LSTM_WB_F], model->N );
     
-    vectors_copy_multiply_scalar(gradients->Wym, gradients->Wy, 1.0 - beta2, model->Y * model->N);
-    vectors_copy_multiply_scalar(gradients->Wim, gradients->Wi, 1.0 - beta2, model->N * model->S);
-    vectors_copy_multiply_scalar(gradients->Wcm, gradients->Wc, 1.0 - beta2, model->N * model->S);
-    vectors_copy_multiply_scalar(gradients->Wom, gradients->Wo, 1.0 - beta2, model->N * model->S);
-    vectors_copy_multiply_scalar(gradients->Wfm, gradients->Wf, 1.0 - beta2, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_Y], gradients->W[LSTM_WB_Y], 1.0 - beta2, model->Y * model->N);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_I], gradients->W[LSTM_WB_I], 1.0 - beta2, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_C], gradients->W[LSTM_WB_C], 1.0 - beta2, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_O], gradients->W[LSTM_WB_O], 1.0 - beta2, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_F], gradients->W[LSTM_WB_F], 1.0 - beta2, model->N * model->S);
     
-    vectors_copy_multiply_scalar(gradients->bym, gradients->by, 1.0 - beta2, model->Y);
-    vectors_copy_multiply_scalar(gradients->bim, gradients->bi, 1.0 - beta2, model->N);
-    vectors_copy_multiply_scalar(gradients->bcm, gradients->bc, 1.0 - beta2, model->N);
-    vectors_copy_multiply_scalar(gradients->bom, gradients->bo, 1.0 - beta2, model->N);
-    vectors_copy_multiply_scalar(gradients->bfm, gradients->bf, 1.0 - beta2, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_Y], gradients->b[LSTM_WB_Y], 1.0 - beta2, model->Y);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_I], gradients->b[LSTM_WB_I], 1.0 - beta2, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_C], gradients->b[LSTM_WB_C], 1.0 - beta2, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_O], gradients->b[LSTM_WB_O], 1.0 - beta2, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_F], gradients->b[LSTM_WB_F], 1.0 - beta2, model->N);
     
-    vectors_multiply_scalar(R->Wy, beta2, model->Y * model->N);
-    vectors_multiply_scalar(R->Wi, beta2, model->N * model->S);
-    vectors_multiply_scalar(R->Wc, beta2, model->N * model->S);
-    vectors_multiply_scalar(R->Wo, beta2, model->N * model->S);
-    vectors_multiply_scalar(R->Wf, beta2, model->N * model->S);
+    vectors_multiply_scalar(R->W[LSTM_WB_Y], beta2, model->Y * model->N);
+    vectors_multiply_scalar(R->W[LSTM_WB_I], beta2, model->N * model->S);
+    vectors_multiply_scalar(R->W[LSTM_WB_C], beta2, model->N * model->S);
+    vectors_multiply_scalar(R->W[LSTM_WB_O], beta2, model->N * model->S);
+    vectors_multiply_scalar(R->W[LSTM_WB_F], beta2, model->N * model->S);
     
-    vectors_multiply_scalar(R->by, beta2, model->Y);
-    vectors_multiply_scalar(R->bi, beta2, model->N);
-    vectors_multiply_scalar(R->bc, beta2, model->N);
-    vectors_multiply_scalar(R->bo, beta2, model->N);
-    vectors_multiply_scalar(R->bf, beta2, model->N);
+    vectors_multiply_scalar(R->b[LSTM_WB_Y], beta2, model->Y);
+    vectors_multiply_scalar(R->b[LSTM_WB_I], beta2, model->N);
+    vectors_multiply_scalar(R->b[LSTM_WB_C], beta2, model->N);
+    vectors_multiply_scalar(R->b[LSTM_WB_O], beta2, model->N);
+    vectors_multiply_scalar(R->b[LSTM_WB_F], beta2, model->N);
     
-    vectors_add(R->Wy, gradients->Wy, model->Y * model->N);
-    vectors_add(R->Wi, gradients->Wi, model->N * model->S);
-    vectors_add(R->Wc, gradients->Wc, model->N * model->S);
-    vectors_add(R->Wo, gradients->Wo, model->N * model->S);
-    vectors_add(R->Wf, gradients->Wf, model->N * model->S);
+    vectors_add(R->W[LSTM_WB_Y], gradients->W[LSTM_WB_Y], model->Y * model->N);
+    vectors_add(R->W[LSTM_WB_I], gradients->W[LSTM_WB_I], model->N * model->S);
+    vectors_add(R->W[LSTM_WB_C], gradients->W[LSTM_WB_C], model->N * model->S);
+    vectors_add(R->W[LSTM_WB_O], gradients->W[LSTM_WB_O], model->N * model->S);
+    vectors_add(R->W[LSTM_WB_F], gradients->W[LSTM_WB_F], model->N * model->S);
     
-    vectors_add(R->by, gradients->by, model->Y);
-    vectors_add(R->bi, gradients->bi, model->N);
-    vectors_add(R->bc, gradients->bc, model->N);
-    vectors_add(R->bo, gradients->bo, model->N);
-    vectors_add(R->bf, gradients->bf, model->N);
+    vectors_add(R->b[LSTM_WB_Y], gradients->b[LSTM_WB_Y], model->Y);
+    vectors_add(R->b[LSTM_WB_I], gradients->b[LSTM_WB_I], model->N);
+    vectors_add(R->b[LSTM_WB_C], gradients->b[LSTM_WB_C], model->N);
+    vectors_add(R->b[LSTM_WB_O], gradients->b[LSTM_WB_O], model->N);
+    vectors_add(R->b[LSTM_WB_F], gradients->b[LSTM_WB_F], model->N);
     
     // R done!
         
-    vectors_copy_multiply_scalar(M->Wym, M->Wy, beta1t, model->Y * model->N);
-    vectors_copy_multiply_scalar(M->Wim, M->Wi, beta1t, model->N * model->S);
-    vectors_copy_multiply_scalar(M->Wcm, M->Wc, beta1t, model->N * model->S);
-    vectors_copy_multiply_scalar(M->Wom, M->Wo, beta1t, model->N * model->S);
-    vectors_copy_multiply_scalar(M->Wfm, M->Wf, beta1t, model->N * model->S);
+    vectors_copy_multiply_scalar(M->Wm[LSTM_WB_Y], M->W[LSTM_WB_Y], beta1t, model->Y * model->N);
+    vectors_copy_multiply_scalar(M->Wm[LSTM_WB_I], M->W[LSTM_WB_I], beta1t, model->N * model->S);
+    vectors_copy_multiply_scalar(M->Wm[LSTM_WB_C], M->W[LSTM_WB_C], beta1t, model->N * model->S);
+    vectors_copy_multiply_scalar(M->Wm[LSTM_WB_O], M->W[LSTM_WB_O], beta1t, model->N * model->S);
+    vectors_copy_multiply_scalar(M->Wm[LSTM_WB_F], M->W[LSTM_WB_F], beta1t, model->N * model->S);
     
-    vectors_copy_multiply_scalar(M->bym, M->by, beta1t, model->Y);
-    vectors_copy_multiply_scalar(M->bim, M->bi, beta1t, model->N);
-    vectors_copy_multiply_scalar(M->bcm, M->bc, beta1t, model->N);
-    vectors_copy_multiply_scalar(M->bom, M->bo, beta1t, model->N);
-    vectors_copy_multiply_scalar(M->bfm, M->bf, beta1t, model->N);
+    vectors_copy_multiply_scalar(M->bm[LSTM_WB_Y], M->b[LSTM_WB_Y], beta1t, model->Y);
+    vectors_copy_multiply_scalar(M->bm[LSTM_WB_I], M->b[LSTM_WB_I], beta1t, model->N);
+    vectors_copy_multiply_scalar(M->bm[LSTM_WB_C], M->b[LSTM_WB_C], beta1t, model->N);
+    vectors_copy_multiply_scalar(M->bm[LSTM_WB_O], M->b[LSTM_WB_O], beta1t, model->N);
+    vectors_copy_multiply_scalar(M->bm[LSTM_WB_F], M->b[LSTM_WB_F], beta1t, model->N);
     
     // M hat done!
     
-    vectors_copy_multiply_scalar(R->Wym, R->Wy, beta2t, model->Y * model->N);
-    vectors_copy_multiply_scalar(R->Wim, R->Wi, beta2t, model->N * model->S);
-    vectors_copy_multiply_scalar(R->Wcm, R->Wc, beta2t, model->N * model->S);
-    vectors_copy_multiply_scalar(R->Wom, R->Wo, beta2t, model->N * model->S);
-    vectors_copy_multiply_scalar(R->Wfm, R->Wf, beta2t, model->N * model->S);
+    vectors_copy_multiply_scalar(R->Wm[LSTM_WB_Y], R->W[LSTM_WB_Y], beta2t, model->Y * model->N);
+    vectors_copy_multiply_scalar(R->Wm[LSTM_WB_I], R->W[LSTM_WB_I], beta2t, model->N * model->S);
+    vectors_copy_multiply_scalar(R->Wm[LSTM_WB_C], R->W[LSTM_WB_C], beta2t, model->N * model->S);
+    vectors_copy_multiply_scalar(R->Wm[LSTM_WB_O], R->W[LSTM_WB_O], beta2t, model->N * model->S);
+    vectors_copy_multiply_scalar(R->Wm[LSTM_WB_F], R->W[LSTM_WB_F], beta2t, model->N * model->S);
     
-    vectors_copy_multiply_scalar(R->bym, R->by, beta2t, model->Y);
-    vectors_copy_multiply_scalar(R->bim, R->bi, beta2t, model->N);
-    vectors_copy_multiply_scalar(R->bcm, R->bc, beta2t, model->N);
-    vectors_copy_multiply_scalar(R->bom, R->bo, beta2t, model->N);
-    vectors_copy_multiply_scalar(R->bfm, R->bf, beta2t, model->N);
+    vectors_copy_multiply_scalar(R->bm[LSTM_WB_Y], R->b[LSTM_WB_Y], beta2t, model->Y);
+    vectors_copy_multiply_scalar(R->bm[LSTM_WB_I], R->b[LSTM_WB_I], beta2t, model->N);
+    vectors_copy_multiply_scalar(R->bm[LSTM_WB_C], R->b[LSTM_WB_C], beta2t, model->N);
+    vectors_copy_multiply_scalar(R->bm[LSTM_WB_O], R->b[LSTM_WB_O], beta2t, model->N);
+    vectors_copy_multiply_scalar(R->bm[LSTM_WB_F], R->b[LSTM_WB_F], beta2t, model->N);
     
     // R hat done!
     
-    vector_sqrt(R->Wym, model->Y * model->N);
-    vector_sqrt(R->Wim, model->N * model->S);
-    vector_sqrt(R->Wcm, model->N * model->S);
-    vector_sqrt(R->Wom, model->N * model->S);
-    vector_sqrt(R->Wfm, model->N * model->S);
+    vector_sqrt(R->Wm[LSTM_WB_Y], model->Y * model->N);
+    vector_sqrt(R->Wm[LSTM_WB_I], model->N * model->S);
+    vector_sqrt(R->Wm[LSTM_WB_C], model->N * model->S);
+    vector_sqrt(R->Wm[LSTM_WB_O], model->N * model->S);
+    vector_sqrt(R->Wm[LSTM_WB_F], model->N * model->S);
     
-    vector_sqrt(R->bym, model->Y);
-    vector_sqrt(R->bim, model->N);
-    vector_sqrt(R->bcm, model->N);
-    vector_sqrt(R->bom, model->N);
-    vector_sqrt(R->bfm, model->N);
+    vector_sqrt(R->bm[LSTM_WB_Y], model->Y);
+    vector_sqrt(R->bm[LSTM_WB_I], model->N);
+    vector_sqrt(R->bm[LSTM_WB_C], model->N);
+    vector_sqrt(R->bm[LSTM_WB_O], model->N);
+    vector_sqrt(R->bm[LSTM_WB_F], model->N);
     
-    vectors_add_scalar(R->Wym, 1e-7, model->Y * model->N);
-    vectors_add_scalar(R->Wim, 1e-7, model->N * model->S);
-    vectors_add_scalar(R->Wcm, 1e-7, model->N * model->S);
-    vectors_add_scalar(R->Wom, 1e-7, model->N * model->S);
-    vectors_add_scalar(R->Wfm, 1e-7, model->N * model->S);
+    vectors_add_scalar(R->Wm[LSTM_WB_Y], EPSILON, model->Y * model->N);
+    vectors_add_scalar(R->Wm[LSTM_WB_I], EPSILON, model->N * model->S);
+    vectors_add_scalar(R->Wm[LSTM_WB_C], EPSILON, model->N * model->S);
+    vectors_add_scalar(R->Wm[LSTM_WB_O], EPSILON, model->N * model->S);
+    vectors_add_scalar(R->Wm[LSTM_WB_F], EPSILON, model->N * model->S);
     
-    vectors_add_scalar(R->bym, 1e-7, model->Y);
-    vectors_add_scalar(R->bim, 1e-7, model->N);
-    vectors_add_scalar(R->bcm, 1e-7, model->N);
-    vectors_add_scalar(R->bom, 1e-7, model->N);
-    vectors_add_scalar(R->bfm, 1e-7, model->N);
+    vectors_add_scalar(R->bm[LSTM_WB_Y], EPSILON, model->Y);
+    vectors_add_scalar(R->bm[LSTM_WB_I], EPSILON, model->N);
+    vectors_add_scalar(R->bm[LSTM_WB_C], EPSILON, model->N);
+    vectors_add_scalar(R->bm[LSTM_WB_O], EPSILON, model->N);
+    vectors_add_scalar(R->bm[LSTM_WB_F], EPSILON, model->N);
         
-    vectors_copy_multiply_scalar(gradients->Wym, M->Wym, model->params->learning_rate, model->Y * model->N);
-    vectors_copy_multiply_scalar(gradients->Wim, M->Wim, model->params->learning_rate, model->N * model->S);
-    vectors_copy_multiply_scalar(gradients->Wcm, M->Wcm, model->params->learning_rate, model->N * model->S);
-    vectors_copy_multiply_scalar(gradients->Wom, M->Wom, model->params->learning_rate, model->N * model->S);
-    vectors_copy_multiply_scalar(gradients->Wfm, M->Wfm, model->params->learning_rate, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_Y], M->Wm[LSTM_WB_Y], model->params->learning_rate, model->Y * model->N);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_I], M->Wm[LSTM_WB_I], model->params->learning_rate, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_C], M->Wm[LSTM_WB_C], model->params->learning_rate, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_O], M->Wm[LSTM_WB_O], model->params->learning_rate, model->N * model->S);
+    vectors_copy_multiply_scalar(gradients->Wm[LSTM_WB_F], M->Wm[LSTM_WB_F], model->params->learning_rate, model->N * model->S);
     
-    vectors_copy_multiply_scalar(gradients->bym, M->bym, model->params->learning_rate, model->Y);
-    vectors_copy_multiply_scalar(gradients->bim, M->bim, model->params->learning_rate, model->N);
-    vectors_copy_multiply_scalar(gradients->bcm, M->bcm, model->params->learning_rate, model->N);
-    vectors_copy_multiply_scalar(gradients->bom, M->bom, model->params->learning_rate, model->N);
-    vectors_copy_multiply_scalar(gradients->bfm, M->bfm, model->params->learning_rate, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_Y], M->bm[LSTM_WB_Y], model->params->learning_rate, model->Y);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_I], M->bm[LSTM_WB_I], model->params->learning_rate, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_C], M->bm[LSTM_WB_C], model->params->learning_rate, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_O], M->bm[LSTM_WB_O], model->params->learning_rate, model->N);
+    vectors_copy_multiply_scalar(gradients->bm[LSTM_WB_F], M->bm[LSTM_WB_F], model->params->learning_rate, model->N);
     
-    vectors_div(gradients->Wym, R->Wym, model->Y * model->N);
-    vectors_div(gradients->Wim, R->Wim, model->N * model->S);
-    vectors_div(gradients->Wcm, R->Wcm, model->N * model->S);
-    vectors_div(gradients->Wom, R->Wom, model->N * model->S);
-    vectors_div(gradients->Wfm, R->Wfm, model->N * model->S);
+    vectors_div(gradients->Wm[LSTM_WB_Y], R->Wm[LSTM_WB_Y], model->Y * model->N);
+    vectors_div(gradients->Wm[LSTM_WB_I], R->Wm[LSTM_WB_I], model->N * model->S);
+    vectors_div(gradients->Wm[LSTM_WB_C], R->Wm[LSTM_WB_C], model->N * model->S);
+    vectors_div(gradients->Wm[LSTM_WB_O], R->Wm[LSTM_WB_O], model->N * model->S);
+    vectors_div(gradients->Wm[LSTM_WB_F], R->Wm[LSTM_WB_F], model->N * model->S);
     
-    vectors_div(gradients->bym, R->bym, model->Y);
-    vectors_div(gradients->bim, R->bim, model->N);
-    vectors_div(gradients->bcm, R->bcm, model->N);
-    vectors_div(gradients->bom, R->bom, model->N);
-    vectors_div(gradients->bfm, R->bfm, model->N);
+    vectors_div(gradients->bm[LSTM_WB_Y], R->bm[LSTM_WB_Y], model->Y);
+    vectors_div(gradients->bm[LSTM_WB_I], R->bm[LSTM_WB_I], model->N);
+    vectors_div(gradients->bm[LSTM_WB_C], R->bm[LSTM_WB_C], model->N);
+    vectors_div(gradients->bm[LSTM_WB_O], R->bm[LSTM_WB_O], model->N);
+    vectors_div(gradients->bm[LSTM_WB_F], R->bm[LSTM_WB_F], model->N);
     
-    vectors_subtract(model->Wy, gradients->Wym, model->Y * model->N);
-    vectors_subtract(model->Wi, gradients->Wim, model->N * model->S);
-    vectors_subtract(model->Wc, gradients->Wcm, model->N * model->S);
-    vectors_subtract(model->Wo, gradients->Wom, model->N * model->S);
-    vectors_subtract(model->Wf, gradients->Wfm, model->N * model->S);
+    vectors_subtract(model->W[LSTM_WB_Y], gradients->Wm[LSTM_WB_Y], model->Y * model->N);
+    vectors_subtract(model->W[LSTM_WB_I], gradients->Wm[LSTM_WB_I], model->N * model->S);
+    vectors_subtract(model->W[LSTM_WB_C], gradients->Wm[LSTM_WB_C], model->N * model->S);
+    vectors_subtract(model->W[LSTM_WB_O], gradients->Wm[LSTM_WB_O], model->N * model->S);
+    vectors_subtract(model->W[LSTM_WB_F], gradients->Wm[LSTM_WB_F], model->N * model->S);
     
-    vectors_subtract(model->by, gradients->bym, model->Y);
-    vectors_subtract(model->bi, gradients->bim, model->N);
-    vectors_subtract(model->bc, gradients->bcm, model->N);
-    vectors_subtract(model->bo, gradients->bom, model->N);
-    vectors_subtract(model->bf, gradients->bfm, model->N);
+    vectors_subtract(model->b[LSTM_WB_Y], gradients->bm[LSTM_WB_Y], model->Y);
+    vectors_subtract(model->b[LSTM_WB_I], gradients->bm[LSTM_WB_I], model->N);
+    vectors_subtract(model->b[LSTM_WB_C], gradients->bm[LSTM_WB_C], model->N);
+    vectors_subtract(model->b[LSTM_WB_O], gradients->bm[LSTM_WB_O], model->N);
+    vectors_subtract(model->b[LSTM_WB_F], gradients->bm[LSTM_WB_F], model->N);
 }
 
 // A = A - alpha * m, m = momentum * m + ( 1 - momentum ) * dldA
 void gradients_decend(lstm_model_t* model, lstm_model_t* gradients)
 {
     // Computing momumentum * m
-    vectors_multiply_scalar(gradients->Wym, model->params->momentum, model->Y * model->N);
-    vectors_multiply_scalar(gradients->Wim, model->params->momentum, model->N * model->S);
-    vectors_multiply_scalar(gradients->Wcm, model->params->momentum, model->N * model->S);
-    vectors_multiply_scalar(gradients->Wom, model->params->momentum, model->N * model->S);
-    vectors_multiply_scalar(gradients->Wfm, model->params->momentum, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wm[LSTM_WB_Y], model->params->momentum, model->Y * model->N);
+    vectors_multiply_scalar(gradients->Wm[LSTM_WB_I], model->params->momentum, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wm[LSTM_WB_C], model->params->momentum, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wm[LSTM_WB_O], model->params->momentum, model->N * model->S);
+    vectors_multiply_scalar(gradients->Wm[LSTM_WB_F], model->params->momentum, model->N * model->S);
     
-    vectors_multiply_scalar(gradients->bym, model->params->momentum, model->Y);
-    vectors_multiply_scalar(gradients->bim, model->params->momentum, model->N);
-    vectors_multiply_scalar(gradients->bcm, model->params->momentum, model->N);
+    vectors_multiply_scalar(gradients->bm[LSTM_WB_Y], model->params->momentum, model->Y);
+    vectors_multiply_scalar(gradients->bm[LSTM_WB_I], model->params->momentum, model->N);
+    vectors_multiply_scalar(gradients->bm[LSTM_WB_C], model->params->momentum, model->N);
 
-    vectors_multiply_scalar(gradients->bom, model->params->momentum, model->N);
-    vectors_multiply_scalar(gradients->bfm, model->params->momentum, model->N);
+    vectors_multiply_scalar(gradients->bm[LSTM_WB_O], model->params->momentum, model->N);
+    vectors_multiply_scalar(gradients->bm[LSTM_WB_F], model->params->momentum, model->N);
     
     // Computing m = momentum * m + (1 - momentum) * dldA
-    vectors_add_scalar_multiply(gradients->Wym, gradients->Wy, model->Y * model->N, 1.0 - model->params->momentum);
-    vectors_add_scalar_multiply(gradients->Wim, gradients->Wi, model->N * model->S, 1.0 - model->params->momentum);
-    vectors_add_scalar_multiply(gradients->Wcm, gradients->Wc, model->N * model->S, 1.0 - model->params->momentum);
-    vectors_add_scalar_multiply(gradients->Wom, gradients->Wo, model->N * model->S, 1.0 - model->params->momentum);
-    vectors_add_scalar_multiply(gradients->Wfm, gradients->Wf, model->N * model->S, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->Wm[LSTM_WB_Y], gradients->W[LSTM_WB_Y], model->Y * model->N, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->Wm[LSTM_WB_I], gradients->W[LSTM_WB_I], model->N * model->S, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->Wm[LSTM_WB_C], gradients->W[LSTM_WB_C], model->N * model->S, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->Wm[LSTM_WB_O], gradients->W[LSTM_WB_O], model->N * model->S, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->Wm[LSTM_WB_F], gradients->W[LSTM_WB_F], model->N * model->S, 1.0 - model->params->momentum);
     
-    vectors_add_scalar_multiply(gradients->bym, gradients->by, model->Y, 1.0 - model->params->momentum);
-    vectors_add_scalar_multiply(gradients->bim, gradients->bi, model->N, 1.0 - model->params->momentum);
-    vectors_add_scalar_multiply(gradients->bcm, gradients->bc, model->N, 1.0 - model->params->momentum);
-    vectors_add_scalar_multiply(gradients->bom, gradients->bo, model->N, 1.0 - model->params->momentum);
-    vectors_add_scalar_multiply(gradients->bfm, gradients->bf, model->N, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->bm[LSTM_WB_Y], gradients->b[LSTM_WB_Y], model->Y, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->bm[LSTM_WB_I], gradients->b[LSTM_WB_I], model->N, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->bm[LSTM_WB_C], gradients->b[LSTM_WB_C], model->N, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->bm[LSTM_WB_O], gradients->b[LSTM_WB_O], model->N, 1.0 - model->params->momentum);
+    vectors_add_scalar_multiply(gradients->bm[LSTM_WB_F], gradients->b[LSTM_WB_F], model->N, 1.0 - model->params->momentum);
     
     // Computing A = A - alpha * m
-    vectors_subtract_scalar_multiply(model->Wy, gradients->Wym, model->Y * model->N, model->params->learning_rate);
-    vectors_subtract_scalar_multiply(model->Wi, gradients->Wim, model->N * model->S, model->params->learning_rate);
-    vectors_subtract_scalar_multiply(model->Wc, gradients->Wcm, model->N * model->S, model->params->learning_rate);
-    vectors_subtract_scalar_multiply(model->Wo, gradients->Wom, model->N * model->S, model->params->learning_rate);
-    vectors_subtract_scalar_multiply(model->Wf, gradients->Wfm, model->N * model->S, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->W[LSTM_WB_Y], gradients->Wm[LSTM_WB_Y], model->Y * model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->W[LSTM_WB_I], gradients->Wm[LSTM_WB_I], model->N * model->S, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->W[LSTM_WB_C], gradients->Wm[LSTM_WB_C], model->N * model->S, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->W[LSTM_WB_O], gradients->Wm[LSTM_WB_O], model->N * model->S, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->W[LSTM_WB_F], gradients->Wm[LSTM_WB_F], model->N * model->S, model->params->learning_rate);
     
-    vectors_subtract_scalar_multiply(model->by, gradients->bym, model->Y, model->params->learning_rate);
-    vectors_subtract_scalar_multiply(model->bi, gradients->bim, model->N, model->params->learning_rate);
-    vectors_subtract_scalar_multiply(model->bc, gradients->bcm, model->N, model->params->learning_rate);
-    vectors_subtract_scalar_multiply(model->bf, gradients->bfm, model->N, model->params->learning_rate);
-    vectors_subtract_scalar_multiply(model->bo, gradients->bom, model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->b[LSTM_WB_Y], gradients->bm[LSTM_WB_Y], model->Y, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->b[LSTM_WB_I], gradients->bm[LSTM_WB_I], model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->b[LSTM_WB_C], gradients->bm[LSTM_WB_C], model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->b[LSTM_WB_F], gradients->bm[LSTM_WB_F], model->N, model->params->learning_rate);
+    vectors_subtract_scalar_multiply(model->b[LSTM_WB_O], gradients->bm[LSTM_WB_O], model->N, model->params->learning_rate);
 }
 
 void lstm_values_next_cache_init(lstm_values_next_cache_t** d_next_to_set, int N, int X)
@@ -550,16 +552,16 @@ static void lstm_forward_propagate_internal(lstm_model_t* model, numeric_t *inpu
     }
     
     // Fully connected + sigmoid layers
-    fully_connected_forward(cache_out->hf, model->Wf, X_one_hot, model->bf, N, S);
+    fully_connected_forward(cache_out->hf, model->W[LSTM_WB_F], X_one_hot, model->b[LSTM_WB_F], N, S);
     sigmoid_forward(cache_out->hf, cache_out->hf, N);
     
-    fully_connected_forward(cache_out->hi, model->Wi, X_one_hot, model->bi, N, S);
+    fully_connected_forward(cache_out->hi, model->W[LSTM_WB_I], X_one_hot, model->b[LSTM_WB_I], N, S);
     sigmoid_forward(cache_out->hi, cache_out->hi, N);
     
-    fully_connected_forward(cache_out->ho, model->Wo, X_one_hot, model->bo, N, S);
+    fully_connected_forward(cache_out->ho, model->W[LSTM_WB_O], X_one_hot, model->b[LSTM_WB_O], N, S);
     sigmoid_forward(cache_out->ho, cache_out->ho, N);
     
-    fully_connected_forward(cache_out->hc, model->Wc, X_one_hot, model->bc, N, S);
+    fully_connected_forward(cache_out->hc, model->W[LSTM_WB_C], X_one_hot, model->b[LSTM_WB_C], N, S);
     
     if (model->params->use_tanf)
         tanf_forward(cache_out->hc, cache_out->hc, N);
@@ -580,7 +582,7 @@ static void lstm_forward_propagate_internal(lstm_model_t* model, numeric_t *inpu
     vectors_copy_multiply(cache_out->h, cache_out->tanh_c_cache, cache_out->ho, N);
     
     // probs = softmax ( Wy*h + by )
-    fully_connected_forward(cache_out->probs, model->Wy, cache_out->h, model->by, Y, N);
+    fully_connected_forward(cache_out->probs, model->W[LSTM_WB_Y], cache_out->h, model->b[LSTM_WB_Y], Y, N);
     if ( softmax > 0 )
     {
         softmax_layers_forward(cache_out->probs, cache_out->probs, Y, model->params->softmax_temp);
@@ -650,7 +652,7 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_p
     }
 #endif
     
-    fully_connected_backward(dldy, model->Wy, h, gradients->Wy, dldh, gradients->by, Y, N);
+    fully_connected_backward(dldy, model->W[LSTM_WB_Y], h, gradients->W[LSTM_WB_Y], dldh, gradients->b[LSTM_WB_Y], Y, N);
     vectors_add(dldh, dldh_next, N);
     
     vectors_copy_multiply(dldho, dldh, cache_in->tanh_c_cache, N);
@@ -665,22 +667,25 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_p
 
     vectors_add(dldc, dldc_next, N);
     
+    // hc -> hf
     vectors_copy_multiply(dldhf, dldc, cache_in->c_old, N);
     sigmoid_backward(dldhf, cache_in->hf, dldhf, N);
     
+    // hc -> hi
     vectors_copy_multiply(dldhi, cache_in->hc, dldc, N);
     sigmoid_backward(dldhi, cache_in->hi, dldhi, N);
-    
     vectors_copy_multiply(dldhc, cache_in->hi, dldc, N);
+    
+    // hc
     if (model->params->use_tanf)
         tanf_backward(dldhc, cache_in->hc, dldhc, N);
     else
         tanh_backward(dldhc, cache_in->hc, dldhc, N);
     
-    fully_connected_backward(dldhi, model->Wi, cache_in->X, gradients->Wi, gradients->dldXi, gradients->bi, N, S);
-    fully_connected_backward(dldhc, model->Wc, cache_in->X, gradients->Wc, gradients->dldXc, gradients->bc, N, S);
-    fully_connected_backward(dldho, model->Wo, cache_in->X, gradients->Wo, gradients->dldXo, gradients->bo, N, S);
-    fully_connected_backward(dldhf, model->Wf, cache_in->X, gradients->Wf, gradients->dldXf, gradients->bf, N, S);
+    fully_connected_backward(dldhi, model->W[LSTM_WB_I], cache_in->X, gradients->W[LSTM_WB_I], gradients->dldXi, gradients->b[LSTM_WB_I], N, S);
+    fully_connected_backward(dldhc, model->W[LSTM_WB_C], cache_in->X, gradients->W[LSTM_WB_C], gradients->dldXc, gradients->b[LSTM_WB_C], N, S);
+    fully_connected_backward(dldho, model->W[LSTM_WB_O], cache_in->X, gradients->W[LSTM_WB_O], gradients->dldXo, gradients->b[LSTM_WB_O], N, S);
+    fully_connected_backward(dldhf, model->W[LSTM_WB_F], cache_in->X, gradients->W[LSTM_WB_F], gradients->dldXf, gradients->b[LSTM_WB_F], N, S);
     
     // dldXi will work as a temporary substitute for dldX (where we get extract dh_next from!)
     vectors_add(gradients->dldXi, gradients->dldXc, S);
@@ -694,15 +699,82 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_p
     copy_vector(cache_out->dldY_pass, &gradients->dldXi[N], model->X);
 }
 
+typedef struct back_thread_arg
+{
+    lstm_model_t* model;
+    numeric_t* y_probabilities;
+    int y_correct;
+    lstm_values_next_cache_t* d_next;
+    lstm_values_cache_t* cache_in;
+    lstm_model_t* gradients;
+    lstm_values_next_cache_t* cache_out;
+} back_thread_arg_t;
+
+static void * lstm_back_thread(void * vargp)
+{
+    back_thread_arg_t * arg = (back_thread_arg_t *)vargp;
+    lstm_backward_propagate_internal(arg->model,
+                                     arg->y_probabilities,                // d_next_layers[p-1]->dldY_pass,
+                                     arg->y_correct,                      // -1
+                                     arg->d_next,
+                                     arg->cache_in,
+                                     arg->gradients,
+                                     arg->cache_out);
+    return NULL;
+}
+
+
 // model, input, state and cache values, &probs, whether or not to apply softmax
-void lstm_backward_propagate(lstm_model_t* model, numeric_t* y_probabilities, int y_correct,
-                                  lstm_values_next_cache_t* d_next, lstm_values_cache_t* cache_in,
-                                  lstm_model_t* gradients, lstm_values_next_cache_t* cache_out)
+static void lstm_backward_propagate(int layers,
+                             lstm_model_t** model_layers,
+                             lstm_values_cache_t ***cache_layers,
+                             int * Y_train,
+                             lstm_values_next_cache_t **d_next_layers,
+                             lstm_model_t** gradients,
+                             int e1,
+                             int e3,
+                             int use_thread)
 {
     time_t prg_begin, prg_end;
+    int p, i;
     prg_begin = clock();
-    lstm_backward_propagate_internal(model, y_probabilities,
-                                     y_correct, d_next, cache_in, gradients, cache_out);
+    if (use_thread && layers > 1)
+    {
+        pthread_t thread_ids[layers];
+        back_thread_arg_t args[layers];
+        
+        for ( p = 0; p < layers; p++ )
+        {
+            args[p].y_probabilities = (p==0) ? cache_layers[p][e1]->probs : d_next_layers[p-1]->dldY_pass;
+            args[p].y_correct = (p==0) ? Y_train[e3] : -1;
+            args[p].model = model_layers[p];
+            args[p].gradients = gradients[p];
+            args[p].d_next = d_next_layers[p];
+            args[p].cache_in = cache_layers[p][e1];
+            args[p].cache_out = d_next_layers[p];
+            pthread_create(&thread_ids[p], NULL, lstm_back_thread, &args[p]);
+        }
+        for ( i = 0; i < layers; i++)
+        {
+            pthread_join(thread_ids[i], NULL);
+        }
+    }
+    else
+    {
+        for (p = 0; p < layers; p++)
+        {
+            numeric_t * y_probabilities = (p==0) ? cache_layers[p][e1]->probs : d_next_layers[p-1]->dldY_pass;
+            int y_correct = (p==0) ? Y_train[e3] : -1;
+            lstm_backward_propagate_internal(model_layers[p],
+                                             y_probabilities,                // d_next_layers[p-1]->dldY_pass,
+                                             y_correct,                      // -1
+                                             d_next_layers[p],
+                                             cache_layers[p][e1],
+                                             gradients[p],
+                                             d_next_layers[p]);
+            
+        }
+    }
     prg_end = clock();
     total_bw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
 }
@@ -710,29 +782,29 @@ void lstm_backward_propagate(lstm_model_t* model, numeric_t* y_probabilities, in
 
 void lstm_zero_the_model(lstm_model_t * model)
 {
-    vector_set_to_zero(model->Wy, model->Y * model->N);
-    vector_set_to_zero(model->Wi, model->N * model->S);
-    vector_set_to_zero(model->Wc, model->N * model->S);
-    vector_set_to_zero(model->Wo, model->N * model->S);
-    vector_set_to_zero(model->Wf, model->N * model->S);
+    vector_set_to_zero(model->W[LSTM_WB_Y], model->Y * model->N);
+    vector_set_to_zero(model->W[LSTM_WB_I], model->N * model->S);
+    vector_set_to_zero(model->W[LSTM_WB_C], model->N * model->S);
+    vector_set_to_zero(model->W[LSTM_WB_O], model->N * model->S);
+    vector_set_to_zero(model->W[LSTM_WB_F], model->N * model->S);
     
-    vector_set_to_zero(model->by, model->Y);
-    vector_set_to_zero(model->bi, model->N);
-    vector_set_to_zero(model->bc, model->N);
-    vector_set_to_zero(model->bf, model->N);
-    vector_set_to_zero(model->bo, model->N);
+    vector_set_to_zero(model->b[LSTM_WB_Y], model->Y);
+    vector_set_to_zero(model->b[LSTM_WB_I], model->N);
+    vector_set_to_zero(model->b[LSTM_WB_C], model->N);
+    vector_set_to_zero(model->b[LSTM_WB_F], model->N);
+    vector_set_to_zero(model->b[LSTM_WB_O], model->N);
     
-    vector_set_to_zero(model->Wym, model->Y * model->N);
-    vector_set_to_zero(model->Wim, model->N * model->S);
-    vector_set_to_zero(model->Wcm, model->N * model->S);
-    vector_set_to_zero(model->Wom, model->N * model->S);
-    vector_set_to_zero(model->Wfm, model->N * model->S);
+    vector_set_to_zero(model->Wm[LSTM_WB_Y], model->Y * model->N);
+    vector_set_to_zero(model->Wm[LSTM_WB_I], model->N * model->S);
+    vector_set_to_zero(model->Wm[LSTM_WB_C], model->N * model->S);
+    vector_set_to_zero(model->Wm[LSTM_WB_O], model->N * model->S);
+    vector_set_to_zero(model->Wm[LSTM_WB_F], model->N * model->S);
     
-    vector_set_to_zero(model->bym, model->Y);
-    vector_set_to_zero(model->bim, model->N);
-    vector_set_to_zero(model->bcm, model->N);
-    vector_set_to_zero(model->bfm, model->N);
-    vector_set_to_zero(model->bom, model->N);
+    vector_set_to_zero(model->bm[LSTM_WB_Y], model->Y);
+    vector_set_to_zero(model->bm[LSTM_WB_I], model->N);
+    vector_set_to_zero(model->bm[LSTM_WB_C], model->N);
+    vector_set_to_zero(model->bm[LSTM_WB_F], model->N);
+    vector_set_to_zero(model->bm[LSTM_WB_O], model->N);
     
     vector_set_to_zero(model->dldhf, model->N);
     vector_set_to_zero(model->dldhi, model->N);
@@ -785,29 +857,29 @@ void lstm_store_net_layers(lstm_model_t** model, FILE *fp, unsigned int layers)
     for (p = 0; p < layers; p++) 
     {        
 #ifdef STORE_NET_AS_ASCII
-        vector_store_ascii(model[p]->Wy, model[p]->Y * model[p]->N, fp);
-        vector_store_ascii(model[p]->Wi, model[p]->N * model[p]->S, fp);
-        vector_store_ascii(model[p]->Wc, model[p]->N * model[p]->S, fp);
-        vector_store_ascii(model[p]->Wo, model[p]->N * model[p]->S, fp);
-        vector_store_ascii(model[p]->Wf, model[p]->N * model[p]->S, fp);
+        vector_store_ascii(model[p]->W[LSTM_WB_Y], model[p]->Y * model[p]->N, fp);
+        vector_store_ascii(model[p]->W[LSTM_WB_I], model[p]->N * model[p]->S, fp);
+        vector_store_ascii(model[p]->W[LSTM_WB_C], model[p]->N * model[p]->S, fp);
+        vector_store_ascii(model[p]->W[LSTM_WB_O], model[p]->N * model[p]->S, fp);
+        vector_store_ascii(model[p]->W[LSTM_WB_F], model[p]->N * model[p]->S, fp);
         
-        vector_store_ascii(model[p]->by, model[p]->Y, fp);
-        vector_store_ascii(model[p]->bi, model[p]->N, fp);
-        vector_store_ascii(model[p]->bc, model[p]->N, fp);
-        vector_store_ascii(model[p]->bf, model[p]->N, fp);
-        vector_store_ascii(model[p]->bo, model[p]->N, fp);
+        vector_store_ascii(model[p]->b[LSTM_WB_Y], model[p]->Y, fp);
+        vector_store_ascii(model[p]->b[LSTM_WB_I], model[p]->N, fp);
+        vector_store_ascii(model[p]->b[LSTM_WB_C], model[p]->N, fp);
+        vector_store_ascii(model[p]->b[LSTM_WB_F], model[p]->N, fp);
+        vector_store_ascii(model[p]->b[LSTM_WB_O], model[p]->N, fp);
 #else
-        vector_store(model[p]->Wy, model[p]->Y * model[p]->N, fp);
-        vector_store(model[p]->Wi, model[p]->N * model[p]->S, fp);
-        vector_store(model[p]->Wc, model[p]->N * model[p]->S, fp);
-        vector_store(model[p]->Wo, model[p]->N * model[p]->S, fp);
-        vector_store(model[p]->Wf, model[p]->N * model[p]->S, fp);
+        vector_store(model[p]->W[LSTM_WB_Y], model[p]->Y * model[p]->N, fp);
+        vector_store(model[p]->W[LSTM_WB_I], model[p]->N * model[p]->S, fp);
+        vector_store(model[p]->W[LSTM_WB_C], model[p]->N * model[p]->S, fp);
+        vector_store(model[p]->W[LSTM_WB_O], model[p]->N * model[p]->S, fp);
+        vector_store(model[p]->W[LSTM_WB_F], model[p]->N * model[p]->S, fp);
         
-        vector_store(model[p]->by, model[p]->Y, fp);
-        vector_store(model[p]->bi, model[p]->N, fp);
-        vector_store(model[p]->bc, model[p]->N, fp);
-        vector_store(model[p]->bf, model[p]->N, fp);
-        vector_store(model[p]->bo, model[p]->N, fp);
+        vector_store(model[p]->b[LSTM_WB_Y], model[p]->Y, fp);
+        vector_store(model[p]->b[LSTM_WB_I], model[p]->N, fp);
+        vector_store(model[p]->b[LSTM_WB_C], model[p]->N, fp);
+        vector_store(model[p]->b[LSTM_WB_F], model[p]->N, fp);
+        vector_store(model[p]->b[LSTM_WB_O], model[p]->N, fp);
 #endif
     }
 }
@@ -839,26 +911,26 @@ void lstm_store_net_layers_as_json(lstm_model_t** model, const char * filename,
         fprintf(fp, "\"Layer %d\": {\n", p+1);
         
         fprintf(fp, "\t\"Wy\": ");
-        vector_store_as_matrix_json(model[p]->Wy, model[p]->Y, model[p]->N, fp);
+        vector_store_as_matrix_json(model[p]->W[LSTM_WB_Y], model[p]->Y, model[p]->N, fp);
         fprintf(fp, ",\n\t\"Wi\": ");
-        vector_store_as_matrix_json(model[p]->Wi, model[p]->N, model[p]->S, fp);
+        vector_store_as_matrix_json(model[p]->W[LSTM_WB_I], model[p]->N, model[p]->S, fp);
         fprintf(fp, ",\n\t\"Wc\": ");
-        vector_store_as_matrix_json(model[p]->Wc, model[p]->N, model[p]->S, fp);
+        vector_store_as_matrix_json(model[p]->W[LSTM_WB_C], model[p]->N, model[p]->S, fp);
         fprintf(fp, ",\n\t\"Wo\": ");
-        vector_store_as_matrix_json(model[p]->Wo, model[p]->N, model[p]->S, fp);
+        vector_store_as_matrix_json(model[p]->W[LSTM_WB_O], model[p]->N, model[p]->S, fp);
         fprintf(fp, ",\n\t\"Wf\": ");
-        vector_store_as_matrix_json(model[p]->Wf, model[p]->N, model[p]->S, fp);
+        vector_store_as_matrix_json(model[p]->W[LSTM_WB_F], model[p]->N, model[p]->S, fp);
         
         fprintf(fp, ",\n\t\"by\": ");
-        vector_store_json(model[p]->by, model[p]->Y, fp);
+        vector_store_json(model[p]->b[LSTM_WB_Y], model[p]->Y, fp);
         fprintf(fp, ",\n\t\"bi\": ");
-        vector_store_json(model[p]->bi, model[p]->N, fp);
+        vector_store_json(model[p]->b[LSTM_WB_I], model[p]->N, fp);
         fprintf(fp, ",\n\t\"bc\": ");
-        vector_store_json(model[p]->bc, model[p]->N, fp);
+        vector_store_json(model[p]->b[LSTM_WB_C], model[p]->N, fp);
         fprintf(fp, ",\n\t\"bf\": ");
-        vector_store_json(model[p]->bf, model[p]->N, fp);
+        vector_store_json(model[p]->b[LSTM_WB_F], model[p]->N, fp);
         fprintf(fp, ",\n\t\"bo\": ");
-        vector_store_json(model[p]->bo, model[p]->N, fp);
+        vector_store_json(model[p]->b[LSTM_WB_O], model[p]->N, fp);
         
         fprintf(fp, "}\n");
         
@@ -1143,42 +1215,42 @@ int lstm_reinit_model(lstm_model_t** model, unsigned int layers,
         i = 0;
         while ( i < Sold )
         {
-            newVectorWf[n*Snew + i] = modelInputs->Wf[n*Sold + i];
-            newVectorWi[n*Snew + i] = modelInputs->Wi[n*Sold + i];
-            newVectorWc[n*Snew + i] = modelInputs->Wc[n*Sold + i];
-            newVectorWo[n*Snew + i] = modelInputs->Wo[n*Sold + i];
+            newVectorWf[n*Snew + i] = modelInputs->W[LSTM_WB_F][n*Sold + i];
+            newVectorWi[n*Snew + i] = modelInputs->W[LSTM_WB_I][n*Sold + i];
+            newVectorWc[n*Snew + i] = modelInputs->W[LSTM_WB_C][n*Sold + i];
+            newVectorWo[n*Snew + i] = modelInputs->W[LSTM_WB_O][n*Sold + i];
             ++i;
         }
         ++n;
     }
     
-    free(modelInputs->Wf);
-    free(modelInputs->Wi);
-    free(modelInputs->Wc);
-    free(modelInputs->Wo);
+    free(modelInputs->W[LSTM_WB_F]);
+    free(modelInputs->W[LSTM_WB_I]);
+    free(modelInputs->W[LSTM_WB_C]);
+    free(modelInputs->W[LSTM_WB_O]);
     free(modelInputs->dldXc);
     free(modelInputs->dldXo);
     free(modelInputs->dldXi);
     free(modelInputs->dldXf);
-    free(modelInputs->Wfm);
-    free(modelInputs->Wim);
-    free(modelInputs->Wcm);
-    free(modelInputs->Wom);
+    free(modelInputs->Wm[LSTM_WB_F]);
+    free(modelInputs->Wm[LSTM_WB_I]);
+    free(modelInputs->Wm[LSTM_WB_C]);
+    free(modelInputs->Wm[LSTM_WB_O]);
     
-    modelInputs->Wf = newVectorWf;
-    modelInputs->Wi = newVectorWi;
-    modelInputs->Wc = newVectorWc;
-    modelInputs->Wo = newVectorWo;
+    modelInputs->W[LSTM_WB_F] = newVectorWf;
+    modelInputs->W[LSTM_WB_I] = newVectorWi;
+    modelInputs->W[LSTM_WB_C] = newVectorWc;
+    modelInputs->W[LSTM_WB_O] = newVectorWo;
     
     modelInputs->dldXc = get_zero_vector(Snew);
     modelInputs->dldXo = get_zero_vector(Snew);
     modelInputs->dldXi = get_zero_vector(Snew);
     modelInputs->dldXf = get_zero_vector(Snew);
     
-    modelInputs->Wfm = get_zero_vector(Nin * Snew);
-    modelInputs->Wim = get_zero_vector(Nin * Snew);
-    modelInputs->Wcm = get_zero_vector(Nin * Snew);
-    modelInputs->Wom = get_zero_vector(Nin * Snew);
+    modelInputs->Wm[LSTM_WB_F] = get_zero_vector(Nin * Snew);
+    modelInputs->Wm[LSTM_WB_I] = get_zero_vector(Nin * Snew);
+    modelInputs->Wm[LSTM_WB_C] = get_zero_vector(Nin * Snew);
+    modelInputs->Wm[LSTM_WB_O] = get_zero_vector(Nin * Snew);
     
     // Reallocate vectors that depend on output size
     newVectorWy = get_random_vector(Ynew * Nout, Nout);
@@ -1188,21 +1260,21 @@ int lstm_reinit_model(lstm_model_t** model, unsigned int layers,
         i = 0;
         while ( i < Nout )
         {
-            newVectorWy[n*Nout + i] = modelOutputs->Wy[n*Nout + i];
+            newVectorWy[n*Nout + i] = modelOutputs->W[LSTM_WB_Y][n*Nout + i];
             ++i;
         }
         ++n;
     }
     
-    free(modelOutputs->Wy);
-    free(modelOutputs->by);
-    free(modelOutputs->Wym);
-    free(modelOutputs->bym);
+    free(modelOutputs->W[LSTM_WB_Y]);
+    free(modelOutputs->b[LSTM_WB_Y]);
+    free(modelOutputs->Wm[LSTM_WB_Y]);
+    free(modelOutputs->bm[LSTM_WB_Y]);
     
-    modelOutputs->Wy = newVectorWy;
-    modelOutputs->by = get_zero_vector(Ynew);
-    modelOutputs->Wym = get_zero_vector(Ynew * Nout);
-    modelOutputs->bym = get_zero_vector(Ynew);
+    modelOutputs->W[LSTM_WB_Y] = newVectorWy;
+    modelOutputs->b[LSTM_WB_Y] = get_zero_vector(Ynew);
+    modelOutputs->Wm[LSTM_WB_Y] = get_zero_vector(Ynew * Nout);
+    modelOutputs->bm[LSTM_WB_Y] = get_zero_vector(Ynew);
     
     // Set new information
     modelInputs->X = newNbrFeatures;
@@ -1220,29 +1292,29 @@ void lstm_read_net_layers(lstm_model_t** model, FILE *fp, unsigned int layers)
     while ( p < layers )
     {
 #ifdef STORE_NET_AS_ASCII
-        vector_read_ascii(model[p]->Wy, model[p]->Y * model[p]->N, fp);
-        vector_read_ascii(model[p]->Wi, model[p]->N * model[p]->S, fp);
-        vector_read_ascii(model[p]->Wc, model[p]->N * model[p]->S, fp);
-        vector_read_ascii(model[p]->Wo, model[p]->N * model[p]->S, fp);
-        vector_read_ascii(model[p]->Wf, model[p]->N * model[p]->S, fp);
+        vector_read_ascii(model[p]->W[LSTM_WB_Y], model[p]->Y * model[p]->N, fp);
+        vector_read_ascii(model[p]->W[LSTM_WB_I], model[p]->N * model[p]->S, fp);
+        vector_read_ascii(model[p]->W[LSTM_WB_C], model[p]->N * model[p]->S, fp);
+        vector_read_ascii(model[p]->W[LSTM_WB_O], model[p]->N * model[p]->S, fp);
+        vector_read_ascii(model[p]->W[LSTM_WB_F], model[p]->N * model[p]->S, fp);
         
-        vector_read_ascii(model[p]->by, model[p]->Y, fp);
-        vector_read_ascii(model[p]->bi, model[p]->N, fp);
-        vector_read_ascii(model[p]->bc, model[p]->N, fp);
-        vector_read_ascii(model[p]->bf, model[p]->N, fp);
-        vector_read_ascii(model[p]->bo, model[p]->N, fp);
+        vector_read_ascii(model[p]->b[LSTM_WB_Y], model[p]->Y, fp);
+        vector_read_ascii(model[p]->b[LSTM_WB_I], model[p]->N, fp);
+        vector_read_ascii(model[p]->b[LSTM_WB_C], model[p]->N, fp);
+        vector_read_ascii(model[p]->b[LSTM_WB_F], model[p]->N, fp);
+        vector_read_ascii(model[p]->b[LSTM_WB_O], model[p]->N, fp);
 #else
-        vector_read(model[p]->Wy, model[p]->Y * model[p]->N, fp);
-        vector_read(model[p]->Wi, model[p]->N * model[p]->S, fp);
-        vector_read(model[p]->Wc, model[p]->N * model[p]->S, fp);
-        vector_read(model[p]->Wo, model[p]->N * model[p]->S, fp);
-        vector_read(model[p]->Wf, model[p]->N * model[p]->S, fp);
+        vector_read(model[p]->W[LSTM_WB_Y], model[p]->Y * model[p]->N, fp);
+        vector_read(model[p]->W[LSTM_WB_I], model[p]->N * model[p]->S, fp);
+        vector_read(model[p]->W[LSTM_WB_C], model[p]->N * model[p]->S, fp);
+        vector_read(model[p]->W[LSTM_WB_O], model[p]->N * model[p]->S, fp);
+        vector_read(model[p]->W[LSTM_WB_F], model[p]->N * model[p]->S, fp);
         
-        vector_read(model[p]->by, model[p]->Y, fp);
-        vector_read(model[p]->bi, model[p]->N, fp);
-        vector_read(model[p]->bc, model[p]->N, fp);
-        vector_read(model[p]->bf, model[p]->N, fp);
-        vector_read(model[p]->bo, model[p]->N, fp);
+        vector_read(model[p]->b[LSTM_WB_Y], model[p]->Y, fp);
+        vector_read(model[p]->b[LSTM_WB_I], model[p]->N, fp);
+        vector_read(model[p]->b[LSTM_WB_C], model[p]->N, fp);
+        vector_read(model[p]->b[LSTM_WB_F], model[p]->N, fp);
+        vector_read(model[p]->b[LSTM_WB_O], model[p]->N, fp);
 #endif
         
         ++p;
@@ -1508,7 +1580,8 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
         index = set_char_to_indx(char_index_mapping, input_string[i]);
         
         count = 0;
-        while ( count < Y ) {
+        while ( count < Y )
+        {
             first_layer_input[count] = count == index ? 1.0 : 0.0;
             ++count;
         }
@@ -1520,9 +1593,11 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
                                caches_layers[p][(i+1)%2],
                                p == 0);
         
-        if ( p > 0 ) {
+        if ( p > 0 )
+        {
             --p;
-            while ( p >= 0 ) {
+            while ( p >= 0 )
+            {
                 lstm_forward_propagate(model_layers[p],
                                        caches_layers[p+1][(i+1)%2]->probs,
                                        caches_layers[p][i%2],
@@ -1532,7 +1607,6 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
             }
             p = 0;
         }
-        
         ++i;
     }
     
@@ -1541,7 +1615,8 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
     
     printf("%c", input);
     i = 0;
-    while ( i < out_length ) {
+    while ( i < out_length )
+    {
         index = set_char_to_indx(char_index_mapping,input);
         
         count = 0;
@@ -1554,9 +1629,11 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
         p = layers - 1;
         lstm_forward_propagate(model_layers[p], first_layer_input, caches_layers[p][i%2], caches_layers[p][(i+1)%2], p == 0);
         
-        if ( p > 0 ) {
+        if ( p > 0 )
+        {
             --p;
-            while ( p >= 0 ) {
+            while ( p >= 0 )
+            {
                 lstm_forward_propagate(model_layers[p], caches_layers[p+1][ (i+1) % 2 ]->probs, caches_layers[p][i%2], caches_layers[p][(i+1)%2], p == 0);
                 --p;
             }
@@ -1591,34 +1668,100 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
 #endif
 }
 
-void lstm_store_progress(const char* filename, unsigned int n, unsigned int epoch, numeric_t loss, const char * tnh)
+typedef struct thread_arg {
+    lstm_model_t* model;
+    lstm_model_t* gradients;
+    lstm_model_t* M;
+    lstm_model_t* R;
+    unsigned int t;
+} thread_arg_t;
+
+static void * optimize_thread(void * vargp)
+{
+    thread_arg_t * arg = (thread_arg_t *)vargp;
+    gradients_adam_optimizer(
+                             arg->model,
+                             arg->gradients,
+                             arg->M,
+                             arg->R,
+                             arg->t);
+    return NULL;
+}
+
+static void adam_optimize(int layers,
+                          lstm_model_t** model_layers,
+                          lstm_model_t** gradient_layers,
+                          lstm_model_t** M_layers,
+                          lstm_model_t** R_layers,
+                          unsigned int n,
+                          int use_thread)
+{
+    time_t prg_begin, prg_end;
+    int i, p;
+
+    prg_begin = clock();
+    if (use_thread && layers > 1)
+    {
+        pthread_t thread_ids[layers];
+        thread_arg_t args[layers];
+        
+        for ( p = 0; p < layers; p++ )
+        {
+            args[p].model = model_layers[p];
+            args[p].gradients = gradient_layers[p];
+            args[p].R = R_layers[p];
+            args[p].M = M_layers[p];
+            args[p].t = n;
+            pthread_create(&thread_ids[p], NULL, optimize_thread, &args[p]);
+        }
+        for ( i = 0; i < layers; i++)
+        {
+            pthread_join(thread_ids[i], NULL);
+        }
+    }
+    else
+    {
+        for ( p = 0; p < layers; p++ )
+        {
+            gradients_adam_optimizer(
+                                     model_layers[p],
+                                     gradient_layers[p],
+                                     M_layers[p],
+                                     R_layers[p],
+                                     n);
+        }
+    }
+    prg_end = clock();
+    total_adam_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
+}
+
+void lstm_store_progress(const char* filename, unsigned int n, unsigned int epoch, numeric_t loss, const char * tnh, const char * mt, unsigned int L, unsigned int N)
 {
     FILE * fp;
     
     fp = fopen(filename, "a");
     if ( fp != NULL )
     {
-        fprintf(fp, "%s,%u,%u,%f,%lf,%lf\n", tnh, n, epoch, loss, total_fw_time, total_bw_time);
+        fprintf(fp, "%s,%s,%u,%u,%u,%u,%f,%lf,%lf,%lf\n", tnh, mt, L, N, n, epoch, loss, total_fw_time, total_bw_time, total_adam_time);
         fclose(fp);
     }
-    
 }
 
 void lstm_model_regularization(lstm_model_t* model, lstm_model_t* gradients)
 {
     numeric_t lambda = model->params->lambda;
     
-    vectors_add_scalar_multiply(gradients->Wy, model->Wy, model->Y * model->N, lambda);
-    vectors_add_scalar_multiply(gradients->Wi, model->Wi, model->N * model->S, lambda);
-    vectors_add_scalar_multiply(gradients->Wc, model->Wc, model->N * model->S, lambda);
-    vectors_add_scalar_multiply(gradients->Wo, model->Wo, model->N * model->S, lambda);
-    vectors_add_scalar_multiply(gradients->Wf, model->Wf, model->N * model->S, lambda);
+    vectors_add_scalar_multiply(gradients->W[LSTM_WB_Y], model->W[LSTM_WB_Y], model->Y * model->N, lambda);
+    vectors_add_scalar_multiply(gradients->W[LSTM_WB_I], model->W[LSTM_WB_I], model->N * model->S, lambda);
+    vectors_add_scalar_multiply(gradients->W[LSTM_WB_C], model->W[LSTM_WB_C], model->N * model->S, lambda);
+    vectors_add_scalar_multiply(gradients->W[LSTM_WB_O], model->W[LSTM_WB_O], model->N * model->S, lambda);
+    vectors_add_scalar_multiply(gradients->W[LSTM_WB_F], model->W[LSTM_WB_F], model->N * model->S, lambda);
     
-    vectors_add_scalar_multiply(gradients->by, model->by, model->Y, lambda);
-    vectors_add_scalar_multiply(gradients->bi, model->bi, model->N, lambda);
-    vectors_add_scalar_multiply(gradients->bc, model->bc, model->N, lambda);
-    vectors_add_scalar_multiply(gradients->bo, model->bo, model->N, lambda);
-    vectors_add_scalar_multiply(gradients->bf, model->bf, model->N, lambda);
+    vectors_add_scalar_multiply(gradients->b[LSTM_WB_Y], model->b[LSTM_WB_Y], model->Y, lambda);
+    vectors_add_scalar_multiply(gradients->b[LSTM_WB_I], model->b[LSTM_WB_I], model->N, lambda);
+    vectors_add_scalar_multiply(gradients->b[LSTM_WB_C], model->b[LSTM_WB_C], model->N, lambda);
+    vectors_add_scalar_multiply(gradients->b[LSTM_WB_O], model->b[LSTM_WB_O], model->N, lambda);
+    vectors_add_scalar_multiply(gradients->b[LSTM_WB_F], model->b[LSTM_WB_F], model->N, lambda);
 }
 
 //                        model, number of training points, X_train, Y_train
@@ -1647,7 +1790,7 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
     int store_progress_every_x_iterations = params->store_progress_every_x_iterations;
     char *store_progress_file_name = params->store_progress_file_name;
     int store_network_every = params->store_network_every;
-    
+
     lstm_values_state_t ** stateful_d_next = NULL;
     lstm_values_cache_t ***cache_layers;
     lstm_values_next_cache_t **d_next_layers;
@@ -1736,6 +1879,7 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         
         ++i;
     }
+    
     
     i = 0; b = 0;
     while ( n < iterations )
@@ -1857,7 +2001,7 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
             lstm_zero_d_next(d_next_layers[p], model_layers[p]->X, model_layers[p]->N);
             ++p;
         }
-        
+         
         // Back propogate
         while ( q > 0 )
         {
@@ -1873,33 +2017,27 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                 ++p;
             }
             
+            /*
+             void lstm_backward_propagate(int layers,
+             lstm_model_t** model_layers,
+             lstm_values_cache_t ***cache_layers,
+             int * Y_train,
+             lstm_values_next_cache_t **d_next_layers,
+             lstm_model_t** gradients,
+             int e1,
+             int e3,
+             int use_thread)
+             */
+            
+            lstm_backward_propagate(layers,
+                                    model_layers,
+                                    cache_layers,
+                                    Y_train,
+                                    d_next_layers,
+                                    gradient_layers_entry,
+                                    e1, e3,
+                                    params->use_threads);
             p = 0;
-            lstm_backward_propagate(model_layers[p],
-                                    cache_layers[p][e1]->probs,
-                                    Y_train[e3],
-                                    d_next_layers[p],
-                                    cache_layers[p][e1],
-                                    gradient_layers_entry[0],
-                                    d_next_layers[p]);
-            
-            if ( p < layers )
-            {
-                ++p;
-                while ( p < layers )
-                {
-                    lstm_backward_propagate(model_layers[p],
-                                            d_next_layers[p-1]->dldY_pass,
-                                            -1,
-                                            d_next_layers[p],
-                                            cache_layers[p][e1],
-                                            gradient_layers_entry[p],
-                                            d_next_layers[p]);
-                    ++p;
-                }
-            }
-            
-            p = 0;
-            
             while ( p < layers ) 
             {
                 sum_gradients(gradient_layers[p], gradient_layers_entry[p]);
@@ -1924,16 +2062,7 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         switch ( params->optimizer )
         {
             case OPTIMIZE_ADAM:
-                while ( p < layers )
-                {
-                    gradients_adam_optimizer(
-                                             model_layers[p],
-                                             gradient_layers[p],
-                                             M_layers[p],
-                                             R_layers[p],
-                                             n);
-                    ++p;
-                }
+                adam_optimize(layers, model_layers, gradient_layers, M_layers, R_layers, n, params->use_threads);
                 break;
 
             case OPTIMIZE_GRADIENT_DESCENT:
@@ -1965,8 +2094,8 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
             
             printf("%s Iteration: %u (epoch: %u), Loss: %f, record: %f (iteration: %d), LR: %f\n",
                    time_buffer, n, epoch, loss, record_keeper, record_iteration, params->learning_rate);
-            printf("Using %s: Total backward time: %.3f  Total forward time: %.3f\n",
-                   params->use_tanf != 0 ? "TANF" : "TANH", total_bw_time, total_fw_time);
+            printf("Using %s: Total backward time: %.3f  Total forward time: %.3f  Total optimizer time: %.3f\n",
+                   params->use_tanf != 0 ? "TANF" : "TANH", total_bw_time, total_fw_time, total_adam_time);
             
             if ( print_progress_sample_output )
             {
@@ -1983,8 +2112,8 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                 if ( fp_progress_output != NULL )
                 {
                     fprintf(fp_progress_output, "%s====== Iteration: %u, loss: %.5lf ======\n", n==0 ? "" : "\n", n, loss);
-                    printf("==== %s: Backward time: %.3f.  Forward time: %.3f ======\n",
-                           params->use_tanf != 0 ? "TANF" : "TANH", total_bw_time, total_fw_time);
+                    printf("==== %s: Backward time: %.3f.  Forward time: %.3f.  Optimizer time: %.3f  ======\n",
+                           params->use_tanf != 0 ? "TANF" : "TANH", total_bw_time, total_fw_time, total_adam_time);
                     lstm_output_string_layers_to_file(fp_progress_output, model_layers, char_index_mapping, X_train[b], print_progress_number_of_chars, layers);
                     fclose(fp_progress_output);
                 }
@@ -1996,9 +2125,9 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
         
         if ( store_progress_every_x_iterations && !(n % store_progress_every_x_iterations ))
         {
-            // const char * th = params->use_tanf ? (params->true_der ? "tanf-truD" : "tanf-tanD") : "tanh";
+            const char * mt = params->use_threads ? "Multi-threaded" : "Single-threaded";
             const char* th = params->use_tanf ? "tanf" : "tanh";
-            lstm_store_progress(store_progress_file_name, n, epoch, loss, th);
+            lstm_store_progress(store_progress_file_name, n, epoch, loss, th, mt, params->layers, params->neurons);
         }
         
         if ( store_network_every && !(n % store_network_every) )

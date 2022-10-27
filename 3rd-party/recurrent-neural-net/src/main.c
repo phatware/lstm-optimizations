@@ -101,7 +101,7 @@ static void create_stats_file(const char* filename)
     fp = fopen(filename, "w");
     if (fp != NULL)
     {
-        fprintf(fp, "Func,Iteration,Epoc,Loss,FWtime,BWtime\n");
+        fprintf(fp, "Func,Type,Layers,Neurons,Iteration,Epoc,Loss,FWtime,BWtime,OPtime\n");
         fclose(fp);
     }
 }
@@ -119,10 +119,10 @@ static void parse_input_args(int argc, char** argv)
             a++;
             continue;
         }
-        else if ( !strcmp(argv[a], "-td") )
+        else if ( !strcmp(argv[a], "-mt") )
         {
             // no attribute
-            params.true_der = 1;
+            params.use_threads = 1;
             a++;
             continue;
         }
@@ -290,7 +290,7 @@ int rnn_main(int argc, char *argv[])
     params.store_network_name_json = STD_JSON_NET_NAME;
     params.store_char_indx_map_name = JSON_KEY_NAME_SET;
     params.use_tanf = 0;        // if 1, USE NEW FAST TANH
-    params.true_der = 0;        // if 1 and TANH is used, the derivative ^(3/2)
+    params.use_threads = 0;        // if 1 and TANH is used, the derivative ^(3/2)
     
     srand( (unsigned int)time ( NULL ) );
     
@@ -475,6 +475,8 @@ int rnn_main(int argc, char *argv[])
             ++p;
         }
         printf("], Features: %d.\n", model_layers[params.layers-1]->X);
+        const char * mt = params.use_threads ? "Multi-threaded" : "Single-threaded";
+        printf("%s\n", mt);
         printf("Allocated bytes for the network: %s\n", prettyPrintBytes(e_alloc_total()));
         printf("Training parameters: Backprop Through Time: %d, LR: %f, Mo: %f, LA: %f, LR-decrease: %f.\n",
                MINI_BATCH_SIZE, params.learning_rate, params.momentum, params.lambda, params.learning_rate_decrease);

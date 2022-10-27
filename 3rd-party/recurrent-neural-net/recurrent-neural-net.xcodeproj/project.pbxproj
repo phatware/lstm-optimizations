@@ -38,6 +38,8 @@
 		F629AAD528EE9E0900D73E02 /* layers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = layers.h; sourceTree = "<group>"; };
 		F629AAD728EE9E0900D73E02 /* set.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = set.h; sourceTree = "<group>"; };
 		F629AAD828EE9E0900D73E02 /* lstm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = lstm.c; sourceTree = "<group>"; };
+		F6C5EB762908EC1A006EC8B5 /* lstm_threaded.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = lstm_threaded.cpp; sourceTree = "<group>"; };
+		F6C5EB772908EC1A006EC8B5 /* lstm_threaded.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = lstm_threaded.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +72,8 @@
 		F629AAC528EE9DCE00D73E02 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				F6C5EB762908EC1A006EC8B5 /* lstm_threaded.cpp */,
+				F6C5EB772908EC1A006EC8B5 /* lstm_threaded.hpp */,
 				F629AAD028EE9E0900D73E02 /* layers.c */,
 				F629AAD528EE9E0900D73E02 /* layers.h */,
 				F629AAD828EE9E0900D73E02 /* lstm.c */,
@@ -265,7 +269,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 84MLK9P9WU;
+				DEVELOPMENT_TEAM = U97D34BCNV;
 				ENABLE_HARDENED_RUNTIME = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -275,7 +279,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 84MLK9P9WU;
+				DEVELOPMENT_TEAM = U97D34BCNV;
 				ENABLE_HARDENED_RUNTIME = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
