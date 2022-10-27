@@ -602,17 +602,74 @@ static void lstm_forward_propagate_internal(lstm_model_t* model, numeric_t *inpu
     
 }
 
+typedef struct forward_thread_arg
+{
+    lstm_model_t* model;
+    numeric_t* input;
+    lstm_values_cache_t* cache_in;
+    lstm_values_cache_t* cache_out;
+    int softmax;
+} forward_thread_arg_t;
+
+static void * lstm_forward_thread(void * vargp)
+{
+    forward_thread_arg_t * arg = (forward_thread_arg_t *)vargp;
+    lstm_forward_propagate_internal(arg->model,
+                                     arg->input,
+                                     arg->cache_in,
+                                     arg->cache_out,
+                                     arg->softmax);
+    return NULL;
+}
+
+
 // model, input, state and cache values, &probs, whether or not to apply softmax
-void lstm_forward_propagate(lstm_model_t* model, numeric_t *input,
-                            lstm_values_cache_t* cache_in, lstm_values_cache_t* cache_out,
-                            int softmax)
+static void lstm_forward_propagate(int layers,
+                                   numeric_t *first_layer_input,
+                                   lstm_model_t** model_layers,
+                                   lstm_values_cache_t ***caches_layer,
+                                   int e1, int e2,
+                                   int use_thread)
 {
     time_t prg_begin, prg_end;
+    int p;
     prg_begin = clock();
-    lstm_forward_propagate_internal(model, input, cache_in, cache_out, softmax);
+    if (use_thread && layers > 1)
+    {
+        pthread_t thread_ids[layers];
+        forward_thread_arg_t args[layers];
+        
+        for (p = layers-1; p >= 0; p--)
+        {
+            args[p].input = (p==layers-1) ? first_layer_input : caches_layer[p+1][e2]->probs;
+            args[p].model = model_layers[p];
+            args[p].cache_in = caches_layer[p][e1];
+            args[p].cache_out = caches_layer[p][e2];
+            args[p].softmax = p == 0;
+            pthread_create(&thread_ids[p], NULL, lstm_forward_thread, &args[p]);
+        }
+        for (p = 0; p < layers; p++)
+        {
+            pthread_join(thread_ids[p], NULL);
+        }
+    }
+    else
+    {
+        for (p = layers-1; p >= 0; p--)
+        {
+            numeric_t * input = (p==layers-1) ? first_layer_input : caches_layer[p+1][e2]->probs;
+            lstm_forward_propagate_internal(model_layers[p],
+                                            input,
+                                            caches_layer[p][e1],
+                                            caches_layer[p][e2],
+                                            p==0);
+        }
+    }
+        
     prg_end = clock();
     total_fw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
 }
+
 
 //                            model, y_probabilities, y_correct, the next deltas, state and cache values, &gradients, &the next deltas
 static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_probabilities, int y_correct,
@@ -740,10 +797,11 @@ static void lstm_backward_propagate(int layers,
     prg_begin = clock();
     if (use_thread && layers > 1)
     {
-        pthread_t thread_ids[layers];
-        back_thread_arg_t args[layers];
-        
-        for ( p = 0; p < layers; p++ )
+        const int size = layers-1;
+        pthread_t thread_ids[size];
+        back_thread_arg_t args[size];
+                
+        for ( p = 0; p < size; p++ )
         {
             args[p].y_probabilities = (p==0) ? cache_layers[p][e1]->probs : d_next_layers[p-1]->dldY_pass;
             args[p].y_correct = (p==0) ? Y_train[e3] : -1;
@@ -754,7 +812,15 @@ static void lstm_backward_propagate(int layers,
             args[p].cache_out = d_next_layers[p];
             pthread_create(&thread_ids[p], NULL, lstm_back_thread, &args[p]);
         }
-        for ( i = 0; i < layers; i++)
+        // run this on main thread
+        lstm_backward_propagate_internal(model_layers[p],
+                                         d_next_layers[p-1]->dldY_pass,
+                                         -1,
+                                         d_next_layers[p],
+                                         cache_layers[p][e1],
+                                         gradients[p],
+                                         d_next_layers[p]);
+        for ( i = 0; i < size; i++)
         {
             pthread_join(thread_ids[i], NULL);
         }
@@ -1383,28 +1449,11 @@ void lstm_output_string_layers_to_file(FILE * fp,lstm_model_t ** model_layers,
             first_layer_input[count] = 0.0;
             ++count;
         }
-        
-        first_layer_input[index] = 1.0;
-        
-        p = layers - 1;
-        lstm_forward_propagate(model_layers[p], first_layer_input,
-                               caches_layer[p][i % 2], caches_layer[p][(i+1)%2], p == 0);
-        
-        if ( p > 0 )
-        {
-            --p;
-            while ( p >= 0 )
-            {
-                lstm_forward_propagate(model_layers[p], caches_layer[p+1][(i+1)%2]->probs,
-                                       caches_layer[p][i % 2], caches_layer[p][(i+1)%2], p == 0);
-                --p;
-            }
-            p = 0;
-        }
-        
-        input = set_probability_choice(char_index_mapping, caches_layer[p][(i+1)%2]->probs);
+               
+        lstm_forward_propagate(layers, first_layer_input, model_layers, caches_layer, i % 2, (i+1)%2, model_layers[0]->params->use_threads);
+ 
+        input = set_probability_choice(char_index_mapping, caches_layer[0][(i+1)%2]->probs);
         fprintf (fp, "%c", input );
-        
         ++i;
     }
     
@@ -1489,25 +1538,9 @@ void lstm_output_string_layers(lstm_model_t ** model_layers, set_t* char_index_m
         
         first_layer_input[index] = 1.0;
         
-        p = layers - 1;
-        lstm_forward_propagate(model_layers[p], first_layer_input, caches_layer[p][i % 2], caches_layer[p][(i+1)%2], p == 0);
-        
-        if ( p > 0 )
-        {
-            --p;
-            while ( p >= 0 ) 
-            {
-                lstm_forward_propagate(model_layers[p],
-                                       caches_layer[p+1][(i+1)%2]->probs,
-                                       caches_layer[p][i % 2], caches_layer[p][(i+1)%2],
-                                       p == 0);
-                --p;
-            }
-            p = 0;
-        }
-        
-        input = set_probability_choice(char_index_mapping,
-                                       caches_layer[p][(i+1)%2]->probs);
+        lstm_forward_propagate(layers, first_layer_input, model_layers, caches_layer, i % 2, (i+1)%2, model_layers[0]->params->use_threads);
+
+        input = set_probability_choice(char_index_mapping, caches_layer[0][(i+1)%2]->probs);
         printf ( "%c", input );
         
         ++i;
@@ -1586,32 +1619,11 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
             ++count;
         }
         
-        p = layers - 1;
-        lstm_forward_propagate(model_layers[p],
-                               first_layer_input,
-                               caches_layers[p][i%2],
-                               caches_layers[p][(i+1)%2],
-                               p == 0);
-        
-        if ( p > 0 )
-        {
-            --p;
-            while ( p >= 0 )
-            {
-                lstm_forward_propagate(model_layers[p],
-                                       caches_layers[p+1][(i+1)%2]->probs,
-                                       caches_layers[p][i%2],
-                                       caches_layers[p][(i+1)%2],
-                                       p == 0);
-                --p;
-            }
-            p = 0;
-        }
+        lstm_forward_propagate(layers, first_layer_input, model_layers, caches_layers, i % 2, (i+1)%2, model_layers[0]->params->use_threads);
         ++i;
     }
     
-    input = set_probability_choice(char_index_mapping,
-                                   caches_layers[0][i%2]->probs);
+    input = set_probability_choice(char_index_mapping, caches_layers[0][i%2]->probs);
     
     printf("%c", input);
     i = 0;
@@ -1626,20 +1638,9 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
             ++count;
         }
         
-        p = layers - 1;
-        lstm_forward_propagate(model_layers[p], first_layer_input, caches_layers[p][i%2], caches_layers[p][(i+1)%2], p == 0);
-        
-        if ( p > 0 )
-        {
-            --p;
-            while ( p >= 0 )
-            {
-                lstm_forward_propagate(model_layers[p], caches_layers[p+1][ (i+1) % 2 ]->probs, caches_layers[p][i%2], caches_layers[p][(i+1)%2], p == 0);
-                --p;
-            }
-            p = 0;
-        }
-        input = set_probability_choice(char_index_mapping, caches_layers[p][(i+1)%2]->probs);
+        lstm_forward_propagate(layers, first_layer_input, model_layers, caches_layers, i % 2, (i+1)%2, model_layers[0]->params->use_threads);
+
+        input = set_probability_choice(char_index_mapping, caches_layers[0][(i+1)%2]->probs);
         printf ( "%c", input );
         //    set_print(char_index_mapping,caches_layer_one->probs);
         ++i;
@@ -1702,10 +1703,11 @@ static void adam_optimize(int layers,
     prg_begin = clock();
     if (use_thread && layers > 1)
     {
-        pthread_t thread_ids[layers];
-        thread_arg_t args[layers];
-        
-        for ( p = 0; p < layers; p++ )
+        const int size = layers-1;
+        pthread_t thread_ids[size];
+        thread_arg_t args[size];
+
+        for ( p = 0; p < size; p++ )
         {
             args[p].model = model_layers[p];
             args[p].gradients = gradient_layers[p];
@@ -1714,7 +1716,13 @@ static void adam_optimize(int layers,
             args[p].t = n;
             pthread_create(&thread_ids[p], NULL, optimize_thread, &args[p]);
         }
-        for ( i = 0; i < layers; i++)
+        gradients_adam_optimizer(
+                                 model_layers[p],
+                                 gradient_layers[p],
+                                 M_layers[p],
+                                 R_layers[p],
+                                 n);
+        for ( i = 0; i < size; i++)
         {
             pthread_join(thread_ids[i], NULL);
         }
@@ -1941,30 +1949,9 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
             
             first_layer_input[X_train[e3]] = 1.0;
             
-            /* Layer numbering starts at the output point of the net */
-            p = layers - 1;
-            lstm_forward_propagate(model_layers[p],
-                                   first_layer_input,
-                                   cache_layers[p][e1],
-                                   cache_layers[p][e2],
-                                   p == 0);
-            
-            if ( p > 0 )
-            {
-                --p;
-                while ( p <= layers - 1 )
-                {
-                    lstm_forward_propagate(model_layers[p],
-                                           cache_layers[p+1][e2]->probs,
-                                           cache_layers[p][e1],
-                                           cache_layers[p][e2],
-                                           p == 0);
-                    --p;
-                }
-                p = 0;
-            }
-            
-            loss_tmp += cross_entropy(cache_layers[p][e2]->probs, Y_train[e3]);
+            lstm_forward_propagate(layers, first_layer_input, model_layers, cache_layers, e1, e2, params->use_threads);
+
+            loss_tmp += cross_entropy(cache_layers[0][e2]->probs, Y_train[e3]);
             ++i; ++q;
         }
         
@@ -2016,19 +2003,7 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                 lstm_zero_the_model(gradient_layers_entry[p]);
                 ++p;
             }
-            
-            /*
-             void lstm_backward_propagate(int layers,
-             lstm_model_t** model_layers,
-             lstm_values_cache_t ***cache_layers,
-             int * Y_train,
-             lstm_values_next_cache_t **d_next_layers,
-             lstm_model_t** gradients,
-             int e1,
-             int e3,
-             int use_thread)
-             */
-            
+                        
             lstm_backward_propagate(layers,
                                     model_layers,
                                     cache_layers,

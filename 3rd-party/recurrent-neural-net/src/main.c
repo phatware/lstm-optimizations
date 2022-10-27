@@ -74,12 +74,15 @@ void usage(char *argv[]) {
     printf("    -st : number of iterations between how the network is stored during training. If 0 only stored once after training.\r\n");
     printf("    -out: number of characters to output directly, note: a network and a datafile must be provided.\r\n");
     printf("    -L  : Number of layers, may not exceed %d\r\n", LSTM_MAX_LAYERS);
-    printf("    -N  : Number of neurons in every layer, may bot exceed %d\r\n", LSTM_MAX_NEURONS);
+    printf("    -N  : Number of neurons in every layer, may not exceed %d\r\n", LSTM_MAX_NEURONS);
     printf("    -vr : Verbosity level. Set to zero and only the loss function after and not during training will be printed.\r\n");
     printf("    -c  : Don't train, only generate output. Seed given by the value. If -r is used, datafile is not considered.\r\n");
     printf("    -s  : Save folder, where models are stored (binary and JSON).\r\n");
-    printf("    -tf : Use tanf() instead of tanh()\r\n");
+    printf("    -pf : Store progress at specified iteration intervals. Default is %d\r\n", STORE_PROGRESS_EVERY_X_ITERATIONS);
+    printf("    -tf : Use tanf() instead of tanh().\r\n");
+    printf("    -mt : Use separate threads for each layer.\r\n");
     printf("    -pn : Progress file name. default is progress.csv\r\n");
+    printf("    -ap : Append progress file instead of overwriting.\r\n");
 //    printf("    -td : When using tanf(), use simplified derivative in back propagation (drop power of 3/2)\r\n");
     printf("\r\n");
     printf("Check std_conf.h to see what default values are used, these are set during compilation.\r\n");
@@ -123,6 +126,13 @@ static void parse_input_args(int argc, char** argv)
         {
             // no attribute
             params.use_threads = 1;
+            a++;
+            continue;
+        }
+        else if ( !strcmp(argv[a], "-ap") )
+        {
+            // no attribute
+            params.append_log = 1;
             a++;
             continue;
         }
@@ -211,7 +221,7 @@ static void parse_input_args(int argc, char** argv)
         }
         else if ( !strcmp(argv[a], "-vr") )
         {
-            params.print_progress = !!atoi(argv[a+1]);
+            params.print_progress = !atoi(argv[a+1]);
         }
         else if ( !strcmp(argv[a], "-c") )
         {
@@ -220,6 +230,10 @@ static void parse_input_args(int argc, char** argv)
         else if ( !strcmp(argv[a], "-pn") )
         {
             params.store_progress_file_name = argv[a+1];
+        }
+        else if ( !strcmp(argv[a], "-pf") )
+        {
+            params.store_progress_every_x_iterations = atoi(argv[a+1]);
         }
         a += 2;
     }
@@ -291,6 +305,7 @@ int rnn_main(int argc, char *argv[])
     params.store_char_indx_map_name = JSON_KEY_NAME_SET;
     params.use_tanf = 0;        // if 1, USE NEW FAST TANH
     params.use_threads = 0;        // if 1 and TANH is used, the derivative ^(3/2)
+    params.append_log = 0;
     
     srand( (unsigned int)time ( NULL ) );
     
@@ -335,7 +350,15 @@ int rnn_main(int argc, char *argv[])
     if (params.store_progress_every_x_iterations > 0)
     {
         // create new progess file name
-        create_stats_file(params.store_progress_file_name);
+        if (params.append_log == 0)
+            create_stats_file(params.store_progress_file_name);
+        else
+        {
+            if (access( params.store_progress_file_name, F_OK ) == -1)
+            {
+                create_stats_file(params.store_progress_file_name);
+            }
+        }
     }
 
     if ( read_network != NULL )

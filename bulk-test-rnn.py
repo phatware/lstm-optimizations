@@ -6,7 +6,7 @@ import subprocess
 # create parser
 parser = argparse.ArgumentParser()
 
-PATH = "/home/stan/work/ML/tanf"
+PATH = "."
 
 # Boolean flag (does not accept input data), with default value
 parser.add_argument('-tf', action="store_true", default=False)

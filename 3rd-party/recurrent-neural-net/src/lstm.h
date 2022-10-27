@@ -111,6 +111,7 @@ typedef struct lstm_model_parameters_t
     
     int use_tanf;           // use tanf()
     int use_threads;        // use multiple threads
+    int append_log;         // append log
 } lstm_model_parameters_t;
 
 typedef enum  lstm_model_wb
@@ -236,12 +237,7 @@ void lstm_cache_container_set_start(lstm_values_cache_t *cache, int neurons);
 void lstm_free_model(lstm_model_t *lstm);
 /**
  * Compute the output of a network
- * @param model model to be used, must been initialized with \ref lstm_init_model
- * \see lstm_init_model
  */
-void lstm_forward_propagate(lstm_model_t *model, numeric_t *input,
-                            lstm_values_cache_t *cache_in, lstm_values_cache_t *cache_out, int softmax);
-
 void lstm_values_state_init(lstm_values_state_t** d_next_to_set, int N);
 void lstm_values_next_state_free(lstm_values_state_t* d_next);
 
