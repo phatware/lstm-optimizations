@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3455A4C4290AFCAE001C1395 /* lstm-mt.c in Sources */ = {isa = PBXBuildFile; fileRef = 3455A4C3290AFCAE001C1395 /* lstm-mt.c */; };
 		F629AAD928EE9E0900D73E02 /* utilities.c in Sources */ = {isa = PBXBuildFile; fileRef = F629AACE28EE9E0900D73E02 /* utilities.c */; };
 		F629AADA28EE9E0900D73E02 /* layers.c in Sources */ = {isa = PBXBuildFile; fileRef = F629AAD028EE9E0900D73E02 /* layers.c */; };
 		F629AADB28EE9E0900D73E02 /* set.c in Sources */ = {isa = PBXBuildFile; fileRef = F629AAD128EE9E0900D73E02 /* set.c */; };
@@ -27,6 +28,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		3455A4C2290AFCAE001C1395 /* lstm-mt.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "lstm-mt.h"; sourceTree = "<group>"; };
+		3455A4C3290AFCAE001C1395 /* lstm-mt.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "lstm-mt.c"; sourceTree = "<group>"; };
 		F629AAC328EE9DCE00D73E02 /* recurrent-neural-net */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "recurrent-neural-net"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F629AACE28EE9E0900D73E02 /* utilities.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = utilities.c; sourceTree = "<group>"; };
 		F629AACF28EE9E0900D73E02 /* utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utilities.h; sourceTree = "<group>"; };
@@ -78,6 +81,8 @@
 				F629AAD528EE9E0900D73E02 /* layers.h */,
 				F629AAD828EE9E0900D73E02 /* lstm.c */,
 				F629AAD228EE9E0900D73E02 /* lstm.h */,
+				3455A4C2290AFCAE001C1395 /* lstm-mt.h */,
+				3455A4C3290AFCAE001C1395 /* lstm-mt.c */,
 				F629AAD428EE9E0900D73E02 /* main.c */,
 				F629AAD128EE9E0900D73E02 /* set.c */,
 				F629AAD728EE9E0900D73E02 /* set.h */,
@@ -149,6 +154,7 @@
 				F629AADC28EE9E0900D73E02 /* main.c in Sources */,
 				F629AADB28EE9E0900D73E02 /* set.c in Sources */,
 				F629AAD928EE9E0900D73E02 /* utilities.c in Sources */,
+				3455A4C4290AFCAE001C1395 /* lstm-mt.c in Sources */,
 				F629AADA28EE9E0900D73E02 /* layers.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -269,7 +275,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = U97D34BCNV;
+				DEVELOPMENT_TEAM = 84MLK9P9WU;
 				ENABLE_HARDENED_RUNTIME = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -279,7 +285,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = U97D34BCNV;
+				DEVELOPMENT_TEAM = 84MLK9P9WU;
 				ENABLE_HARDENED_RUNTIME = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

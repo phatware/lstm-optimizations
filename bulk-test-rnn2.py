@@ -22,12 +22,12 @@ print(args.mt)
 print(args.it)
 print(args.path)
 
-neurons_list = [16, 32, 64, 128, 200]
+neurons_list = [16, 32, 64, 128, 200, 250]
 
 env_copy = os.environ.copy()
 env_copy["PATH"] = os.pathsep.join(["."])
 
-for layers in range(2,6):
+for layers in range(2,7):
     for neurons in neurons_list:
         filename = "progress_"
         cmd = [args.path + "/3rd-party/recurrent-neural-net/net", args.path + "/3rd-party/bbc/all.txt", "-it", str(args.it), "-L", str(layers), "-N", str(neurons)]

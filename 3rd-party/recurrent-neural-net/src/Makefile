@@ -1,5 +1,6 @@
 CC := clang
-FLAGS := O3 Ofast msse3 Wall D_SINGLE_PRECISION
+FLAGS := O3 Ofast msse3 Wall 
+# D_SINGLE_PRECISION
 LIBS := m
 GCC_HINTS := all \
   unused \
@@ -14,7 +15,8 @@ SRCS := layers.c \
 		lstm.c \
 		main.c \
 		set.c \
-		utilities.c
+		utilities.c \
+		lstm-mt.c
 
 OBJS := $(subst .c,.o,$(SRCS))
 

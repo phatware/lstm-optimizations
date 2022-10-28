@@ -21,17 +21,13 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "lstm.h"
+#include "lstm-mt.h"
 #include <time.h>
 #include <pthread.h>
 
 #ifdef _WIN32
 #include <stdio.h>
-#endif // 
-
-double total_fw_time = 0;
-double total_bw_time = 0;
-double total_adam_time = 0;
+#endif //
 
 void lstm_init_fail(const char * msg)
 {
@@ -505,7 +501,7 @@ void lstm_values_next_state_free(lstm_values_state_t* d_next)
     free(d_next);
 }
 
-static void lstm_forward_propagate_internal(lstm_model_t* model, numeric_t *input,
+void lstm_forward_propagate_layer(lstm_model_t* model, numeric_t *input,
                             lstm_values_cache_t* cache_in, lstm_values_cache_t* cache_out,
                             int softmax)
 {
@@ -602,77 +598,9 @@ static void lstm_forward_propagate_internal(lstm_model_t* model, numeric_t *inpu
     
 }
 
-typedef struct forward_thread_arg
-{
-    lstm_model_t* model;
-    numeric_t* input;
-    lstm_values_cache_t* cache_in;
-    lstm_values_cache_t* cache_out;
-    int softmax;
-} forward_thread_arg_t;
-
-static void * lstm_forward_thread(void * vargp)
-{
-    forward_thread_arg_t * arg = (forward_thread_arg_t *)vargp;
-    lstm_forward_propagate_internal(arg->model,
-                                     arg->input,
-                                     arg->cache_in,
-                                     arg->cache_out,
-                                     arg->softmax);
-    return NULL;
-}
-
-
-// model, input, state and cache values, &probs, whether or not to apply softmax
-static void lstm_forward_propagate(int layers,
-                                   numeric_t *first_layer_input,
-                                   lstm_model_t** model_layers,
-                                   lstm_values_cache_t ***caches_layer,
-                                   int e1, int e2,
-                                   int use_thread)
-{
-    time_t prg_begin, prg_end;
-    int p;
-    prg_begin = clock();
-    if (use_thread && layers > 1)
-    {
-        pthread_t thread_ids[layers];
-        forward_thread_arg_t args[layers];
-        
-        for (p = layers-1; p >= 0; p--)
-        {
-            args[p].input = (p==layers-1) ? first_layer_input : caches_layer[p+1][e2]->probs;
-            args[p].model = model_layers[p];
-            args[p].cache_in = caches_layer[p][e1];
-            args[p].cache_out = caches_layer[p][e2];
-            args[p].softmax = p == 0;
-            pthread_create(&thread_ids[p], NULL, lstm_forward_thread, &args[p]);
-        }
-        for (p = 0; p < layers; p++)
-        {
-            pthread_join(thread_ids[p], NULL);
-        }
-    }
-    else
-    {
-        for (p = layers-1; p >= 0; p--)
-        {
-            numeric_t * input = (p==layers-1) ? first_layer_input : caches_layer[p+1][e2]->probs;
-            lstm_forward_propagate_internal(model_layers[p],
-                                            input,
-                                            caches_layer[p][e1],
-                                            caches_layer[p][e2],
-                                            p==0);
-        }
-    }
-        
-    prg_end = clock();
-    total_fw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
-}
-
 
 //                            model, y_probabilities, y_correct, the next deltas, state and cache values, &gradients, &the next deltas
-static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_probabilities, int y_correct,
+void lstm_backward_propagate_layer(lstm_model_t* model, numeric_t* y_probabilities, int y_correct,
                              lstm_values_next_cache_t* d_next, lstm_values_cache_t* cache_in,
                              lstm_model_t* gradients, lstm_values_next_cache_t* cache_out)
 {
@@ -755,96 +683,6 @@ static void lstm_backward_propagate_internal(lstm_model_t* model, numeric_t* y_p
     // To pass on to next layer
     copy_vector(cache_out->dldY_pass, &gradients->dldXi[N], model->X);
 }
-
-typedef struct back_thread_arg
-{
-    lstm_model_t* model;
-    numeric_t* y_probabilities;
-    int y_correct;
-    lstm_values_next_cache_t* d_next;
-    lstm_values_cache_t* cache_in;
-    lstm_model_t* gradients;
-    lstm_values_next_cache_t* cache_out;
-} back_thread_arg_t;
-
-static void * lstm_back_thread(void * vargp)
-{
-    back_thread_arg_t * arg = (back_thread_arg_t *)vargp;
-    lstm_backward_propagate_internal(arg->model,
-                                     arg->y_probabilities,                // d_next_layers[p-1]->dldY_pass,
-                                     arg->y_correct,                      // -1
-                                     arg->d_next,
-                                     arg->cache_in,
-                                     arg->gradients,
-                                     arg->cache_out);
-    return NULL;
-}
-
-
-// model, input, state and cache values, &probs, whether or not to apply softmax
-static void lstm_backward_propagate(int layers,
-                             lstm_model_t** model_layers,
-                             lstm_values_cache_t ***cache_layers,
-                             int * Y_train,
-                             lstm_values_next_cache_t **d_next_layers,
-                             lstm_model_t** gradients,
-                             int e1,
-                             int e3,
-                             int use_thread)
-{
-    time_t prg_begin, prg_end;
-    int p, i;
-    prg_begin = clock();
-    if (use_thread && layers > 1)
-    {
-        const int size = layers-1;
-        pthread_t thread_ids[size];
-        back_thread_arg_t args[size];
-                
-        for ( p = 0; p < size; p++ )
-        {
-            args[p].y_probabilities = (p==0) ? cache_layers[p][e1]->probs : d_next_layers[p-1]->dldY_pass;
-            args[p].y_correct = (p==0) ? Y_train[e3] : -1;
-            args[p].model = model_layers[p];
-            args[p].gradients = gradients[p];
-            args[p].d_next = d_next_layers[p];
-            args[p].cache_in = cache_layers[p][e1];
-            args[p].cache_out = d_next_layers[p];
-            pthread_create(&thread_ids[p], NULL, lstm_back_thread, &args[p]);
-        }
-        // run this on main thread
-        lstm_backward_propagate_internal(model_layers[p],
-                                         d_next_layers[p-1]->dldY_pass,
-                                         -1,
-                                         d_next_layers[p],
-                                         cache_layers[p][e1],
-                                         gradients[p],
-                                         d_next_layers[p]);
-        for ( i = 0; i < size; i++)
-        {
-            pthread_join(thread_ids[i], NULL);
-        }
-    }
-    else
-    {
-        for (p = 0; p < layers; p++)
-        {
-            numeric_t * y_probabilities = (p==0) ? cache_layers[p][e1]->probs : d_next_layers[p-1]->dldY_pass;
-            int y_correct = (p==0) ? Y_train[e3] : -1;
-            lstm_backward_propagate_internal(model_layers[p],
-                                             y_probabilities,                // d_next_layers[p-1]->dldY_pass,
-                                             y_correct,                      // -1
-                                             d_next_layers[p],
-                                             cache_layers[p][e1],
-                                             gradients[p],
-                                             d_next_layers[p]);
-            
-        }
-    }
-    prg_end = clock();
-    total_bw_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
-}
-
 
 void lstm_zero_the_model(lstm_model_t * model)
 {
@@ -1592,15 +1430,15 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
     
     caches_layers = e_calloc(layers, sizeof(lstm_values_cache_t**));
     
-    while ( p < layers ) {
+    while ( p < layers )
+    {
         caches_layers[p] = e_calloc(2, sizeof(lstm_values_cache_t*));
-        
         i = 0;
-        while ( i < 2 ) {
+        while ( i < 2 )
+        {
             caches_layers[p][i] = lstm_cache_container_init(model_layers[p]->X, model_layers[0]->N, model_layers[0]->Y);
             ++i;
         }
-        
         ++p;
     }
     
@@ -1669,88 +1507,17 @@ void lstm_output_string_from_string(lstm_model_t **model_layers, set_t* char_ind
 #endif
 }
 
-typedef struct thread_arg {
-    lstm_model_t* model;
-    lstm_model_t* gradients;
-    lstm_model_t* M;
-    lstm_model_t* R;
-    unsigned int t;
-} thread_arg_t;
-
-static void * optimize_thread(void * vargp)
-{
-    thread_arg_t * arg = (thread_arg_t *)vargp;
-    gradients_adam_optimizer(
-                             arg->model,
-                             arg->gradients,
-                             arg->M,
-                             arg->R,
-                             arg->t);
-    return NULL;
-}
-
-static void adam_optimize(int layers,
-                          lstm_model_t** model_layers,
-                          lstm_model_t** gradient_layers,
-                          lstm_model_t** M_layers,
-                          lstm_model_t** R_layers,
-                          unsigned int n,
-                          int use_thread)
-{
-    time_t prg_begin, prg_end;
-    int i, p;
-
-    prg_begin = clock();
-    if (use_thread && layers > 1)
-    {
-        const int size = layers-1;
-        pthread_t thread_ids[size];
-        thread_arg_t args[size];
-
-        for ( p = 0; p < size; p++ )
-        {
-            args[p].model = model_layers[p];
-            args[p].gradients = gradient_layers[p];
-            args[p].R = R_layers[p];
-            args[p].M = M_layers[p];
-            args[p].t = n;
-            pthread_create(&thread_ids[p], NULL, optimize_thread, &args[p]);
-        }
-        gradients_adam_optimizer(
-                                 model_layers[p],
-                                 gradient_layers[p],
-                                 M_layers[p],
-                                 R_layers[p],
-                                 n);
-        for ( i = 0; i < size; i++)
-        {
-            pthread_join(thread_ids[i], NULL);
-        }
-    }
-    else
-    {
-        for ( p = 0; p < layers; p++ )
-        {
-            gradients_adam_optimizer(
-                                     model_layers[p],
-                                     gradient_layers[p],
-                                     M_layers[p],
-                                     R_layers[p],
-                                     n);
-        }
-    }
-    prg_end = clock();
-    total_adam_time += (double)(prg_end - prg_begin) / (double)CLOCKS_PER_SEC;
-}
-
 void lstm_store_progress(const char* filename, unsigned int n, unsigned int epoch, numeric_t loss, const char * tnh, const char * mt, unsigned int L, unsigned int N)
 {
-    FILE * fp;
-    
-    fp = fopen(filename, "a");
-    if ( fp != NULL )
+    const net_cpu_performance_t * pcpu = get_cpu_performance();
+    FILE * fp = fopen(filename, "a");
+    if (NULL != fp)
     {
-        fprintf(fp, "%s,%s,%u,%u,%u,%u,%f,%lf,%lf,%lf\n", tnh, mt, L, N, n, epoch, loss, total_fw_time, total_bw_time, total_adam_time);
+        fprintf(fp, "%s,%s,%u,%u,%u,%u,%f,%lf,%lf,%lf,%lf,%lf,%lf\n",
+                tnh, mt, L, N, n, epoch, loss,
+                pcpu->cpu_time_forward, pcpu->time_forward,
+                pcpu->cpu_time_back, pcpu->time_back,
+                pcpu->cpu_time_adam, pcpu->time_adam);
         fclose(fp);
     }
 }
@@ -2066,11 +1833,12 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
             memset(time_buffer, '\0', sizeof time_buffer);
             time(&time_iter);
             strftime(time_buffer, sizeof time_buffer, "%X", localtime(&time_iter));
+            const net_cpu_performance_t * pcpu = get_cpu_performance();
             
             printf("%s Iteration: %u (epoch: %u), Loss: %f, record: %f (iteration: %d), LR: %f\n",
                    time_buffer, n, epoch, loss, record_keeper, record_iteration, params->learning_rate);
             printf("Using %s: Total backward time: %.3f  Total forward time: %.3f  Total optimizer time: %.3f\n",
-                   params->use_tanf != 0 ? "TANF" : "TANH", total_bw_time, total_fw_time, total_adam_time);
+                   params->use_tanf != 0 ? "TANF" : "TANH", pcpu->time_back, pcpu->time_forward, pcpu->time_adam);
             
             if ( print_progress_sample_output )
             {
@@ -2088,7 +1856,8 @@ void lstm_train(lstm_model_t** model_layers, lstm_model_parameters_t *params,
                 {
                     fprintf(fp_progress_output, "%s====== Iteration: %u, loss: %.5lf ======\n", n==0 ? "" : "\n", n, loss);
                     printf("==== %s: Backward time: %.3f.  Forward time: %.3f.  Optimizer time: %.3f  ======\n",
-                           params->use_tanf != 0 ? "TANF" : "TANH", total_bw_time, total_fw_time, total_adam_time);
+                           params->use_tanf != 0 ? "TANF" : "TANH",
+                           pcpu->time_back, pcpu->time_forward, pcpu->time_adam);
                     lstm_output_string_layers_to_file(fp_progress_output, model_layers, char_index_mapping, X_train[b], print_progress_number_of_chars, layers);
                     fclose(fp_progress_output);
                 }

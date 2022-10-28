@@ -104,7 +104,7 @@ static void create_stats_file(const char* filename)
     fp = fopen(filename, "w");
     if (fp != NULL)
     {
-        fprintf(fp, "Func,Type,Layers,Neurons,Iteration,Epoc,Loss,FWtime,BWtime,OPtime\n");
+        fprintf(fp, "func,type,layers,neurons,iteration,epoc,loss,forward_cpu,forward_time,back_cpu,back_time,adam_cpu,adam_time\n");
         fclose(fp);
     }
 }

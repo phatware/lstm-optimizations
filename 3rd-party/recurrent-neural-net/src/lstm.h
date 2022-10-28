@@ -358,5 +358,13 @@ void lstm_store_net_layers(lstm_model_t** model, FILE *fp, unsigned int layers);
 
 void gradients_adam_optimizer(lstm_model_t* model, lstm_model_t* gradients, lstm_model_t* M, lstm_model_t* R, unsigned int t);
 
+void lstm_forward_propagate_layer(lstm_model_t* model, numeric_t *input,
+                                  lstm_values_cache_t* cache_in, lstm_values_cache_t* cache_out,
+                                  int softmax);
+
+void lstm_backward_propagate_layer(lstm_model_t* model, numeric_t* y_probabilities, int y_correct,
+                                   lstm_values_next_cache_t* d_next, lstm_values_cache_t* cache_in,
+                                   lstm_model_t* gradients, lstm_values_next_cache_t* cache_out);
+
 #endif
 
